@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Viewer</title>
+  <link rel="icon" type="image/x-icon" href="/assets/open-book.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+  <!-- Viewer Header -->
+  <header class="reading-header" id="readingHeader">
+    <div class="reading-toolbar">
+      <div class="toolbar-left">
+        <button class="btn--outline btn btn--ghost btn--round btn--floating">
+          <a href="index.html">❮❮</a>
+        </button>
+        <span class="pdf-title" id="currentPdfTitle">Loading...</span>
+      </div>
+      <div class="toolbar-center">
+        <button class="btn--outline btn btn--ghost btn--round btn--floating" id="zoomOut">−</button>
+        <span class="zoom-level" id="zoomLevel">100%</span>
+        <button class="btn--outline btn btn--ghost btn--round btn--floating" id="zoomIn">+</button>
+        <div class="page-controls">
+          <button class="btn--outline btn btn--ghost btn--round btn--floating" id="prevPage">‹ Prev</button>
+          <span class="page-info" id="pageInfo"></span>
+          <button class="btn--outline btn btn--ghost btn--round btn--floating" id="nextPage">Next ›</button>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <div class="theme-controls">
+            <label class="theme-toggle">
+                <input type="checkbox" id="themeToggle">
+                <span class="theme-slider">🌙</span>
+            </label>
+        </div>
+        <div class="eye-protection">
+            <button class="btn--outline btn--sm eye-protection-btn" id="eyeProtectionToggle">
+                👁️ Eye Protection
+            </button>
+        </div>
+        <button class="btn--outline btn--sm eye-protection-btn" id="toggleTOC">📋 Contents</button>
+        <button class="btn--outline btn--sm eye-protection-btn" id="fullscreenBtn">⛶ Fullscreen</button>
+        <span class="reading-time" id="readingTime">00:00</span>
+        <span class="reading-progress" id="readingProgress">0%</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Eye Protection Settings Modal (same as index.html) -->
+  <div class="modal hidden" id="eyeProtectionModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Eye Protection Settings</h3>
+        <button class="modal-close" id="closeEyeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Intensity Level: <span id="intensityValue">50</span>%</label>
+          <input type="range" id="eyeIntensity" min="0" max="100" value="50" class="intensity-slider">
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="eyeProtectionEnabled" checked>
+            Enable Eye Protection Mode
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn--secondary btn--sm eye-protection-btn" id="closeEyeModal2">Cancel</button>
+        <button class="btn--primary btn--sm eye-protection-btn" id="saveEyeSettings">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Viewer -->
+  <main class="reading-view" id="readingView">
+    <div class="reading-container">
+      <!-- TOC -->
+      <aside class="toc-sidebar hidden" id="tocSidebar">
+        <div class="toc-header">
+          <h3>Table of Contents</h3>
+          <button class="toc-close" id="closeTOC">×</button>
+        </div>
+        <div class="toc-content" id="tocContent"></div>
+      </aside>
+
+      <!-- Canvas -->
+      <div class="pdf-viewer-container">
+        <div class="pdf-loading hidden" id="pdfLoading">
+          <div class="spinner"></div><p>Loading PDF...</p>
+          <div class="loading-progress">
+            <div class="progress-bar"><div class="progress-fill" id="loadingProgress"></div></div>
+            <span id="loadingPercent">0%</span>
+          </div>
+        </div>
+
+        <div class="pdf-canvas-container">
+          <div class="page-spread" id="pageSpread">
+            <div class="pdf-page-container left-page">
+              <canvas id="leftPageCanvas"></canvas>
+              <div class="page-number" id="leftPageNumber"></div>
+            </div>
+            <div class="pdf-page-container right-page">
+              <canvas id="rightPageCanvas"></canvas>
+              <div class="page-number" id="rightPageNumber"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <!-- <div class="reading-status-bar">
+      <span class="reading-progress" id="readingProgress">0%</span>
+      <button class="btn--outline" id="bookmarkBtn">🔖</button>
+      <button class="btn--outline" id="shareBtn">📤</button>
+      <span class="reading-time" id="readingTime">00:00</span>
+    </div> -->
+  </main>
+
+  <script type="module" src="js/viewer.js"></script>
+</body>
+</html>

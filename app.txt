@@ -1,0 +1,1154 @@
+// Dynamic PDF Reader Application with PDF.js Integration
+
+// Set PDF.js worker
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+class DynamicPDFReader {
+    constructor() {
+        this.state = {
+            currentPDF: null,
+            pdfDocument: null,
+            currentPage: 1,
+            totalPages: 0,
+            zoomLevel: 1.0,
+            darkMode: false,
+            eyeProtectionEnabled: false,
+            eyeProtectionIntensity: 50,
+            colorTemperature: 'neutral',
+            tocOpen: false,
+            searchQuery: '',
+            selectedCategory: '',
+            viewMode: 'grid',
+            isFullscreen: false,
+            readingStartTime: null,
+            bookmarks: []
+        };
+        
+        this.pdfs = [];
+        this.tableOfContents = [];
+        this.canvasCache = new Map();
+        
+        // Sample PDF configuration - in real app this would be dynamically loaded
+        this.samplePDFConfig = {
+            "files": [
+                {
+                    "filename": "technical-manual.pdf",
+                    "title": "Technical Manual",
+                    "description": "Comprehensive technical documentation with detailed specifications",
+                    "category": "Technical",
+                    "author": "Tech Team",
+                    "pages": 120,
+                    "size": "2.3 MB",
+                    "thumbnail": null
+                },
+                {
+                    "filename": "programming-guide.pdf", 
+                    "title": "JavaScript Programming Guide",
+                    "description": "Complete guide to modern JavaScript development practices",
+                    "category": "Programming",
+                    "author": "Dev Community",
+                    "pages": 85,
+                    "size": "1.8 MB",
+                    "thumbnail": null
+                },
+                {
+                    "filename": "design-principles.pdf",
+                    "title": "Modern Design Principles", 
+                    "description": "Essential design principles for contemporary interfaces",
+                    "category": "Design",
+                    "author": "Design Studio",
+                    "pages": 64,
+                    "size": "3.1 MB",
+                    "thumbnail": null
+                },
+                {
+                    "filename": "user-research.pdf",
+                    "title": "User Experience Research Methods",
+                    "description": "Research methodologies for understanding user behavior",
+                    "category": "Research", 
+                    "author": "UX Lab",
+                    "pages": 95,
+                    "size": "2.7 MB",
+                    "thumbnail": null
+                },
+                {
+                    "filename": "javascript-tutorial.pdf",
+                    "title": "Advanced JavaScript Tutorial",
+                    "description": "Advanced concepts and patterns in JavaScript development",
+                    "category": "Tutorial",
+                    "author": "Code Academy",
+                    "pages": 156,
+                    "size": "4.2 MB",
+                    "thumbnail": null
+                },
+                {
+                    "filename": "web-development.pdf",
+                    "title": "Full Stack Web Development",
+                    "description": "Complete guide to modern web development stack",
+                    "category": "Programming",
+                    "author": "Web Masters",
+                    "pages": 203,
+                    "size": "5.1 MB",
+                    "thumbnail": null
+                }
+            ]
+        };
+        
+        this.init();
+    }
+    
+    init() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setupApp());
+        } else {
+            this.setupApp();
+        }
+    }
+    
+    async setupApp() {
+        console.log('🚀 Initializing Dynamic PDF Reader...');
+        
+        try {
+            this.loadSettings();
+            this.createEyeProtectionOverlay();
+            this.bindEvents();
+            await this.loadPDFCatalog();
+            this.updateUI();
+            this.showToast('PDF Reader initialized successfully', 'success');
+            
+            console.log('✅ PDF Reader App ready');
+        } catch (error) {
+            console.error('❌ Failed to initialize app:', error);
+            this.showToast('Failed to initialize PDF Reader', 'error');
+        }
+    }
+    
+    loadSettings() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('pdfReaderSettings') || '{}');
+            this.state = { ...this.state, ...saved };
+            
+            // Load bookmarks
+            const bookmarks = JSON.parse(localStorage.getItem('pdfReaderBookmarks') || '[]');
+            this.state.bookmarks = bookmarks;
+        } catch (e) {
+            console.warn('Failed to load settings:', e);
+        }
+    }
+    
+    saveSettings() {
+        try {
+            const settings = {
+                darkMode: this.state.darkMode,
+                eyeProtectionEnabled: this.state.eyeProtectionEnabled,
+                eyeProtectionIntensity: this.state.eyeProtectionIntensity,
+                colorTemperature: this.state.colorTemperature,
+                viewMode: this.state.viewMode,
+                zoomLevel: this.state.zoomLevel
+            };
+            localStorage.setItem('pdfReaderSettings', JSON.stringify(settings));
+            localStorage.setItem('pdfReaderBookmarks', JSON.stringify(this.state.bookmarks));
+        } catch (e) {
+            console.warn('Failed to save settings:', e);
+        }
+    }
+    
+    createEyeProtectionOverlay() {
+        const existing = document.getElementById('eyeProtectionOverlay');
+        if (existing) existing.remove();
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'eye-protection-overlay';
+        overlay.id = 'eyeProtectionOverlay';
+        document.body.appendChild(overlay);
+    }
+    
+    bindEvents() {
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('change', (e) => {
+                this.state.darkMode = e.target.checked;
+                this.updateTheme();
+                this.saveSettings();
+            });
+        }
+        
+        // Eye protection
+        const eyeBtn = document.getElementById('eyeProtectionToggle');
+        if (eyeBtn) {
+            eyeBtn.addEventListener('click', () => this.showEyeProtectionModal());
+        }
+        
+        // Search
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.state.searchQuery = e.target.value.toLowerCase();
+                this.renderPDFCatalog();
+            });
+        }
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => {
+                this.renderPDFCatalog();
+            });
+        }
+        
+        // Category filter
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', (e) => {
+                this.state.selectedCategory = e.target.value;
+                this.renderPDFCatalog();
+            });
+        }
+        
+        // View toggle
+        const gridView = document.getElementById('gridView');
+        const listView = document.getElementById('listView');
+        if (gridView) {
+            gridView.addEventListener('click', () => this.setViewMode('grid'));
+        }
+        if (listView) {
+            listView.addEventListener('click', () => this.setViewMode('list'));
+        }
+        
+        // Eye protection modal
+        this.bindEyeProtectionEvents();
+        
+        // Reading view controls
+        this.bindReadingControls();
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+        
+        // Window resize for responsive canvas
+        window.addEventListener('resize', () => this.debounce(() => {
+            if (this.state.currentPDF) {
+                this.renderCurrentPages();
+            }
+        }, 250));
+    }
+    
+    bindEyeProtectionEvents() {
+        const modal = document.getElementById('eyeProtectionModal');
+        const closeButtons = document.querySelectorAll('#closeEyeModal, #closeEyeModal2');
+        const saveBtn = document.getElementById('saveEyeSettings');
+        const intensitySlider = document.getElementById('eyeIntensity');
+        
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => this.hideEyeProtectionModal());
+        });
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveEyeProtectionSettings());
+        }
+        
+        if (intensitySlider) {
+            intensitySlider.addEventListener('input', (e) => {
+                document.getElementById('intensityValue').textContent = e.target.value;
+            });
+        }
+        
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) this.hideEyeProtectionModal();
+            });
+        }
+    }
+    
+    bindReadingControls() {
+        const controls = [
+            { id: 'backToCatalog', action: () => this.showHomepage() },
+            { id: 'zoomIn', action: () => this.zoomIn() },
+            { id: 'zoomOut', action: () => this.zoomOut() },
+            { id: 'prevPage', action: () => this.previousPage() },
+            { id: 'nextPage', action: () => this.nextPage() },
+            { id: 'toggleTOC', action: () => this.toggleTOC() },
+            { id: 'closeTOC', action: () => this.closeTOC() },
+            { id: 'fullscreenBtn', action: () => this.toggleFullscreen() },
+            { id: 'bookmarkBtn', action: () => this.toggleBookmark() },
+            { id: 'shareBtn', action: () => this.shareCurrentPage() }
+        ];
+        
+        controls.forEach(({ id, action }) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', action);
+            }
+        });
+    }
+    
+    handleKeyboardShortcuts(e) {
+        if (!this.state.currentPDF) return;
+        
+        // Don't handle shortcuts when typing in inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        switch(e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                this.previousPage();
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                this.nextPage();
+                break;
+            case '+':
+            case '=':
+                e.preventDefault();
+                this.zoomIn();
+                break;
+            case '-':
+                e.preventDefault();
+                this.zoomOut();
+                break;
+            case 'f':
+            case 'F':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    this.focusSearch();
+                }
+                break;
+            case 'Escape':
+                if (this.state.tocOpen) {
+                    this.closeTOC();
+                } else if (this.state.isFullscreen) {
+                    this.toggleFullscreen();
+                }
+                break;
+            case 't':
+            case 'T':
+                e.preventDefault();
+                this.toggleTOC();
+                break;
+            case 'b':
+            case 'B':
+                e.preventDefault();
+                this.toggleBookmark();
+                break;
+        }
+    }
+    
+    async loadPDFCatalog() {
+        console.log('📚 Loading PDF catalog...');
+        
+        const loader = document.getElementById('catalogLoader');
+        if (loader) loader.classList.remove('hidden');
+        
+        try {
+            // Simulate dynamic PDF discovery with metadata extraction
+            await this.delay(1000);
+            
+            this.pdfs = this.samplePDFConfig.files.map((pdf, index) => ({
+                id: index + 1,
+                ...pdf,
+                lastModified: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+                thumbnail: this.generateThumbnailPlaceholder(pdf.category)
+            }));
+            
+            console.log(`✅ Loaded ${this.pdfs.length} PDFs`);
+            this.renderPDFCatalog();
+            
+        } catch (error) {
+            console.error('❌ Failed to load PDFs:', error);
+            this.showToast('Failed to load PDF catalog', 'error');
+        } finally {
+            if (loader) loader.classList.add('hidden');
+        }
+    }
+    
+    generateThumbnailPlaceholder(category) {
+        const icons = {
+            'Technical': '⚙️',
+            'Programming': '💻',
+            'Design': '🎨',
+            'Research': '🔬',
+            'Tutorial': '📖',
+            'Manual': '📋'
+        };
+        return icons[category] || '📄';
+    }
+    
+    renderPDFCatalog() {
+        const grid = document.getElementById('pdfGrid');
+        if (!grid) return;
+        
+        let filteredPDFs = [...this.pdfs];
+        
+        // Apply search filter
+        if (this.state.searchQuery) {
+            filteredPDFs = filteredPDFs.filter(pdf => 
+                pdf.title.toLowerCase().includes(this.state.searchQuery) ||
+                pdf.description.toLowerCase().includes(this.state.searchQuery) ||
+                pdf.category.toLowerCase().includes(this.state.searchQuery) ||
+                pdf.author.toLowerCase().includes(this.state.searchQuery)
+            );
+        }
+        
+        // Apply category filter
+        if (this.state.selectedCategory) {
+            filteredPDFs = filteredPDFs.filter(pdf => pdf.category === this.state.selectedCategory);
+        }
+        
+        // Update view mode class
+        grid.className = `pdf-grid ${this.state.viewMode === 'list' ? 'list-view' : ''}`;
+        
+        if (filteredPDFs.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--color-text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                    <h3>No PDFs found</h3>
+                    <p>Try adjusting your search or filter criteria.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = filteredPDFs.map(pdf => `
+            <div class="pdf-card" data-pdf-id="${pdf.id}">
+                <div class="pdf-thumbnail">
+                    ${pdf.thumbnail}
+                    <div class="file-icon">PDF</div>
+                </div>
+                <div class="pdf-card-content">
+                    <h3>${pdf.title}</h3>
+                    <p>${pdf.description}</p>
+                    <div class="pdf-meta">
+                        <div class="pdf-stats">
+                            <span>📄 ${pdf.pages}p</span>
+                            <span>💾 ${pdf.size}</span>
+                            <span>👤 ${pdf.author}</span>
+                        </div>
+                        <span class="pdf-category">${pdf.category}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Add click events
+        grid.querySelectorAll('.pdf-card').forEach(card => {
+            const pdfId = parseInt(card.getAttribute('data-pdf-id'));
+            card.addEventListener('click', () => this.openPDF(pdfId));
+        });
+    }
+    
+    async openPDF(id) {
+        console.log(`📖 Opening PDF with ID: ${id}`);
+        
+        const pdf = this.pdfs.find(p => p.id === id);
+        if (!pdf) {
+            this.showToast('PDF not found', 'error');
+            return;
+        }
+        
+        this.state.currentPDF = pdf;
+        this.state.currentPage = 1;
+        this.state.readingStartTime = Date.now();
+        
+        this.showReadingView();
+        
+        try {
+            await this.loadPDFDocument(pdf);
+        } catch (error) {
+            console.error('❌ Failed to load PDF:', error);
+            this.showToast('Failed to load PDF document', 'error');
+            this.showHomepage();
+        }
+    }
+    
+    async loadPDFDocument(pdf) {
+        const loadingEl = document.getElementById('pdfLoading');
+        const progressEl = document.getElementById('loadingProgress');
+        const percentEl = document.getElementById('loadingPercent');
+        
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        
+        try {
+            // Since we don't have actual PDF files, we'll simulate the loading process
+            // In a real implementation, this would load from `/assets/${pdf.filename}`
+            
+            for (let i = 0; i <= 100; i += 10) {
+                await this.delay(100);
+                if (progressEl) progressEl.style.width = `${i}%`;
+                if (percentEl) percentEl.textContent = `${i}%`;
+            }
+            
+            // Create a mock PDF document
+            this.state.pdfDocument = {
+                numPages: pdf.pages,
+                getPage: async (pageNum) => this.getMockPage(pageNum)
+            };
+            
+            this.state.totalPages = pdf.pages;
+            
+            await this.extractTableOfContents();
+            await this.renderCurrentPages();
+            this.updateReadingInterface();
+            
+            this.showToast(`Loaded "${pdf.title}" successfully`, 'success');
+            
+        } finally {
+            if (loadingEl) loadingEl.classList.add('hidden');
+        }
+    }
+    
+    getMockPage(pageNum) {
+        // Mock page object for demonstration
+        return {
+            pageNumber: pageNum,
+            render: async (context) => {
+                return new Promise((resolve) => {
+                    const { canvasContext, viewport } = context;
+                    
+                    // Set canvas dimensions properly
+                    const canvas = canvasContext.canvas;
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    // Clear canvas
+                    canvasContext.clearRect(0, 0, viewport.width, viewport.height);
+                    
+                    // Fill with white background
+                    canvasContext.fillStyle = '#ffffff';
+                    canvasContext.fillRect(0, 0, viewport.width, viewport.height);
+                    
+                    // Add border
+                    canvasContext.strokeStyle = '#e0e0e0';
+                    canvasContext.lineWidth = 2;
+                    canvasContext.strokeRect(1, 1, viewport.width - 2, viewport.height - 2);
+                    
+                    // Set text properties
+                    canvasContext.fillStyle = '#333333';
+                    canvasContext.textAlign = 'left';
+                    canvasContext.textBaseline = 'top';
+                    
+                    // Title
+                    canvasContext.font = `bold ${Math.floor(24 * viewport.scale)}px Arial`;
+                    canvasContext.fillText(`${this.state.currentPDF.title}`, 40, 40);
+                    
+                    // Page number
+                    canvasContext.font = `${Math.floor(20 * viewport.scale)}px Arial`;
+                    canvasContext.fillText(`Page ${pageNum}`, 40, 80);
+                    
+                    // Content based on page type
+                    canvasContext.font = `${Math.floor(16 * viewport.scale)}px Arial`;
+                    let y = 140;
+                    const lineHeight = Math.floor(24 * viewport.scale);
+                    
+                    if (pageNum === 1) {
+                        const introText = [
+                            'Introduction',
+                            '',
+                            'Welcome to this comprehensive guide. This document provides',
+                            'detailed information about the topic with practical examples',
+                            'and real-world applications.',
+                            '',
+                            'Key features of this document:',
+                            '• Comprehensive coverage of fundamental concepts',
+                            '• Practical examples and use cases',
+                            '• Step-by-step tutorials and guides',
+                            '• Best practices and recommendations',
+                            '',
+                            'This material has been carefully structured to provide',
+                            'maximum learning value while maintaining readability',
+                            'and engagement throughout the document.'
+                        ];
+                        
+                        introText.forEach(line => {
+                            if (line === 'Introduction') {
+                                canvasContext.font = `bold ${Math.floor(18 * viewport.scale)}px Arial`;
+                                canvasContext.fillText(line, 40, y);
+                                canvasContext.font = `${Math.floor(16 * viewport.scale)}px Arial`;
+                            } else {
+                                canvasContext.fillText(line, 40, y);
+                            }
+                            y += lineHeight;
+                        });
+                    } else {
+                        // Generate chapter-based content
+                        const chapter = Math.ceil(pageNum / 10);
+                        const section = Math.ceil((pageNum % 10) / 3) || 1;
+                        
+                        canvasContext.font = `bold ${Math.floor(18 * viewport.scale)}px Arial`;
+                        canvasContext.fillText(`Chapter ${chapter} - Section ${section}`, 40, y);
+                        y += lineHeight * 1.5;
+                        
+                        canvasContext.font = `${Math.floor(16 * viewport.scale)}px Arial`;
+                        
+                        const sampleContent = [
+                            'This section covers important concepts that build upon',
+                            'the foundation established in previous chapters.',
+                            '',
+                            'Key topics include:',
+                            '',
+                            `• Advanced techniques for ${this.state.currentPDF.category.toLowerCase()}`,
+                            '• Implementation strategies and approaches',
+                            '• Common challenges and solutions',
+                            '• Performance optimization techniques',
+                            '',
+                            'The following examples demonstrate practical applications',
+                            'of these concepts in real-world scenarios:',
+                            '',
+                            'Example 1: Basic Implementation',
+                            'This example shows the fundamental approach to solving',
+                            'common problems in this domain.',
+                            '',
+                            'Example 2: Advanced Techniques',
+                            'Building on the basic implementation, this example',
+                            'demonstrates more sophisticated approaches.'
+                        ];
+                        
+                        sampleContent.forEach(line => {
+                            if (y > viewport.height - 60) return; // Don't overflow page
+                            canvasContext.fillText(line, 40, y);
+                            y += lineHeight;
+                        });
+                    }
+                    
+                    // Footer with page number
+                    canvasContext.font = `${Math.floor(12 * viewport.scale)}px Arial`;
+                    canvasContext.fillStyle = '#666666';
+                    canvasContext.textAlign = 'center';
+                    canvasContext.fillText(
+                        `- ${pageNum} -`, 
+                        viewport.width / 2, 
+                        viewport.height - 30
+                    );
+                    
+                    // Add some visual elements
+                    if (pageNum % 5 === 0) {
+                        // Add a simple chart/diagram placeholder every 5 pages
+                        canvasContext.strokeStyle = '#cccccc';
+                        canvasContext.lineWidth = 1;
+                        const chartX = 40;
+                        const chartY = Math.min(y + 20, viewport.height - 150);
+                        const chartW = viewport.width - 80;
+                        const chartH = 80;
+                        
+                        canvasContext.strokeRect(chartX, chartY, chartW, chartH);
+                        canvasContext.fillStyle = '#f0f0f0';
+                        canvasContext.fillRect(chartX + 1, chartY + 1, chartW - 2, chartH - 2);
+                        
+                        canvasContext.fillStyle = '#888888';
+                        canvasContext.font = `${Math.floor(14 * viewport.scale)}px Arial`;
+                        canvasContext.textAlign = 'center';
+                        canvasContext.fillText('Chart/Diagram Placeholder', chartX + chartW/2, chartY + chartH/2);
+                    }
+                    
+                    setTimeout(resolve, 50); // Small delay to simulate processing
+                });
+            },
+            getViewport: (options) => ({
+                width: (options.scale || 1) * 595, // A4 width at 72 DPI
+                height: (options.scale || 1) * 842, // A4 height at 72 DPI
+                scale: options.scale || 1
+            })
+        };
+    }
+    
+    async extractTableOfContents() {
+        console.log('📑 Extracting table of contents...');
+        
+        // Mock table of contents for demonstration
+        const mockTOC = [
+            { title: 'Introduction', page: 1, level: 1 },
+            { title: 'Getting Started', page: 3, level: 2 },
+            { title: 'Basic Concepts', page: 7, level: 2 },
+            { title: 'Advanced Topics', page: 15, level: 1 },
+            { title: 'Implementation Details', page: 18, level: 2 },
+            { title: 'Best Practices', page: 25, level: 2 },
+            { title: 'Performance Optimization', page: 28, level: 3 },
+            { title: 'Security Considerations', page: 32, level: 3 },
+            { title: 'Examples', page: 40, level: 1 },
+            { title: 'Case Studies', page: 45, level: 2 },
+            { title: 'Conclusion', page: Math.max(1, this.state.totalPages - 5), level: 1 }
+        ];
+        
+        this.tableOfContents = mockTOC.filter(item => item.page <= this.state.totalPages);
+        this.renderTableOfContents();
+    }
+    
+    renderTableOfContents() {
+        const tocContent = document.getElementById('tocContent');
+        if (!tocContent) return;
+        
+        if (this.tableOfContents.length === 0) {
+            tocContent.innerHTML = `
+                <div class="toc-loading">
+                    <p>No table of contents available</p>
+                </div>
+            `;
+            return;
+        }
+        
+        tocContent.innerHTML = this.tableOfContents.map(item => `
+            <a href="#" class="toc-item level-${item.level}" data-page="${item.page}">
+                ${item.title}
+                <span style="float: right; opacity: 0.6;">${item.page}</span>
+            </a>
+        `).join('');
+        
+        // Add click events
+        tocContent.querySelectorAll('.toc-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = parseInt(item.getAttribute('data-page'));
+                this.goToPage(page);
+            });
+        });
+    }
+    
+    async renderCurrentPages() {
+        if (!this.state.pdfDocument) return;
+        
+        const leftCanvas = document.getElementById('leftPageCanvas');
+        const rightCanvas = document.getElementById('rightPageCanvas');
+        const rightContainer = document.querySelector('.right-page');
+        
+        if (!leftCanvas) return;
+        
+        try {
+            // Render left page
+            await this.renderPage(this.state.currentPage, leftCanvas);
+            document.getElementById('leftPageNumber').textContent = this.state.currentPage;
+            
+            // Render right page if it exists
+            const rightPage = this.state.currentPage + 1;
+            if (rightPage <= this.state.totalPages) {
+                if (rightContainer) rightContainer.style.display = 'block';
+                await this.renderPage(rightPage, rightCanvas);
+                document.getElementById('rightPageNumber').textContent = rightPage;
+            } else {
+                if (rightContainer) rightContainer.style.display = 'none';
+            }
+            
+        } catch (error) {
+            console.error('❌ Failed to render pages:', error);
+            this.showToast('Failed to render pages', 'error');
+        }
+    }
+    
+    async renderPage(pageNum, canvas) {
+        if (!this.state.pdfDocument || !canvas) return;
+        
+        const page = await this.state.pdfDocument.getPage(pageNum);
+        const viewport = page.getViewport({ scale: this.state.zoomLevel });
+        
+        const context = canvas.getContext('2d');
+        
+        await page.render({
+            canvasContext: context,
+            viewport: viewport
+        });
+    }
+    
+    updateReadingInterface() {
+        if (!this.state.currentPDF) return;
+        
+        // Update title
+        const titleEl = document.getElementById('currentPdfTitle');
+        if (titleEl) titleEl.textContent = this.state.currentPDF.title;
+        
+        // Update page info
+        this.updatePageInfo();
+        this.updateZoomLevel();
+        this.updateReadingProgress();
+        this.updateTOCActive();
+    }
+    
+    updatePageInfo() {
+        const pageInfoEl = document.getElementById('pageInfo');
+        if (!pageInfoEl) return;
+        
+        const rightPage = this.state.currentPage + 1;
+        const totalPages = this.state.totalPages;
+        
+        if (rightPage <= totalPages) {
+            pageInfoEl.textContent = `Page ${this.state.currentPage}-${rightPage} of ${totalPages}`;
+        } else {
+            pageInfoEl.textContent = `Page ${this.state.currentPage} of ${totalPages}`;
+        }
+        
+        // Update navigation buttons
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        
+        if (prevBtn) prevBtn.disabled = this.state.currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = this.state.currentPage >= totalPages;
+    }
+    
+    updateZoomLevel() {
+        const zoomEl = document.getElementById('zoomLevel');
+        if (zoomEl) {
+            zoomEl.textContent = `${Math.round(this.state.zoomLevel * 100)}%`;
+        }
+        
+        const pageSpread = document.getElementById('pageSpread');
+        if (pageSpread) {
+            pageSpread.style.transform = `scale(${this.state.zoomLevel})`;
+        }
+    }
+    
+    updateReadingProgress() {
+        const progressEl = document.getElementById('readingProgress');
+        if (progressEl && this.state.totalPages > 0) {
+            const progress = Math.round((this.state.currentPage / this.state.totalPages) * 100);
+            progressEl.textContent = `${progress}% completed`;
+        }
+        
+        // Update reading time
+        const timeEl = document.getElementById('readingTime');
+        if (timeEl && this.state.readingStartTime) {
+            const elapsed = Math.floor((Date.now() - this.state.readingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            timeEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    updateTOCActive() {
+        const tocItems = document.querySelectorAll('.toc-item');
+        tocItems.forEach(item => item.classList.remove('active'));
+        
+        // Find the current section
+        let activeIndex = 0;
+        for (let i = 0; i < this.tableOfContents.length; i++) {
+            if (this.tableOfContents[i].page <= this.state.currentPage) {
+                activeIndex = i;
+            } else {
+                break;
+            }
+        }
+        
+        if (tocItems[activeIndex]) {
+            tocItems[activeIndex].classList.add('active');
+        }
+    }
+    
+    // Navigation methods
+    goToPage(pageNum) {
+        if (pageNum < 1 || pageNum > this.state.totalPages) return;
+        
+        this.state.currentPage = pageNum;
+        this.renderCurrentPages();
+        this.updateReadingInterface();
+    }
+    
+    previousPage() {
+        if (this.state.currentPage > 1) {
+            this.state.currentPage = Math.max(1, this.state.currentPage - 2);
+            this.renderCurrentPages();
+            this.updateReadingInterface();
+        }
+    }
+    
+    nextPage() {
+        if (this.state.currentPage < this.state.totalPages) {
+            this.state.currentPage = Math.min(this.state.totalPages, this.state.currentPage + 2);
+            this.renderCurrentPages();
+            this.updateReadingInterface();
+        }
+    }
+    
+    // Zoom methods
+    zoomIn() {
+        if (this.state.zoomLevel < 3.0) {
+            this.state.zoomLevel = Math.min(3.0, this.state.zoomLevel + 0.25);
+            this.renderCurrentPages();
+            this.updateZoomLevel();
+            this.saveSettings();
+        }
+    }
+    
+    zoomOut() {
+        if (this.state.zoomLevel > 0.5) {
+            this.state.zoomLevel = Math.max(0.5, this.state.zoomLevel - 0.25);
+            this.renderCurrentPages();
+            this.updateZoomLevel();
+            this.saveSettings();
+        }
+    }
+    
+    // View management
+    showHomepage() {
+        const homepage = document.getElementById('homepage');
+        const readingView = document.getElementById('readingView');
+        const header = document.querySelector('.header');
+        const readingHeader = document.getElementById('readingHeader');
+        
+        if (homepage) homepage.classList.remove('hidden');
+        if (readingView) readingView.classList.add('hidden');
+        if (header) header.classList.remove('hidden');
+        if (readingHeader) readingHeader.classList.add('hidden');
+        
+        this.state.currentPDF = null;
+        this.state.pdfDocument = null;
+        this.closeTOC();
+        
+        if (this.state.isFullscreen) {
+            this.toggleFullscreen();
+        }
+    }
+    
+    showReadingView() {
+        const homepage = document.getElementById('homepage');
+        const readingView = document.getElementById('readingView');
+        const header = document.querySelector('.header');
+        const readingHeader = document.getElementById('readingHeader');
+        
+        if (homepage) homepage.classList.add('hidden');
+        if (readingView) readingView.classList.remove('hidden');
+        if (header) header.classList.add('hidden');
+        if (readingHeader) readingHeader.classList.remove('hidden');
+    }
+    
+    // UI state methods
+    setViewMode(mode) {
+        this.state.viewMode = mode;
+        
+        const gridBtn = document.getElementById('gridView');
+        const listBtn = document.getElementById('listView');
+        
+        if (gridBtn && listBtn) {
+            gridBtn.classList.toggle('active', mode === 'grid');
+            listBtn.classList.toggle('active', mode === 'list');
+        }
+        
+        this.renderPDFCatalog();
+        this.saveSettings();
+    }
+    
+    updateUI() {
+        this.updateTheme();
+        this.updateEyeProtection();
+        
+        // Set initial states
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.checked = this.state.darkMode;
+        }
+        
+        const eyeEnabledCheckbox = document.getElementById('eyeProtectionEnabled');
+        if (eyeEnabledCheckbox) {
+            eyeEnabledCheckbox.checked = this.state.eyeProtectionEnabled;
+        }
+        
+        const intensitySlider = document.getElementById('eyeIntensity');
+        const intensityValue = document.getElementById('intensityValue');
+        if (intensitySlider && intensityValue) {
+            intensitySlider.value = this.state.eyeProtectionIntensity;
+            intensityValue.textContent = this.state.eyeProtectionIntensity;
+        }
+        
+        const colorTempSelect = document.getElementById('colorTemperature');
+        if (colorTempSelect) {
+            colorTempSelect.value = this.state.colorTemperature;
+        }
+        
+        this.setViewMode(this.state.viewMode);
+    }
+    
+    updateTheme() {
+        const scheme = this.state.darkMode ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-color-scheme', scheme);
+    }
+    
+    updateEyeProtection() {
+        const overlay = document.getElementById('eyeProtectionOverlay');
+        if (!overlay) return;
+        
+        const intensity = this.state.eyeProtectionIntensity / 100 * 0.3;
+        document.documentElement.style.setProperty('--eye-protection-intensity', intensity);
+        
+        overlay.className = `eye-protection-overlay ${this.state.colorTemperature}`;
+        
+        if (this.state.eyeProtectionEnabled) {
+            overlay.classList.add('active');
+        } else {
+            overlay.classList.remove('active');
+        }
+        
+        const eyeBtn = document.getElementById('eyeProtectionToggle');
+        if (eyeBtn) {
+            eyeBtn.classList.toggle('active', this.state.eyeProtectionEnabled);
+        }
+    }
+    
+    // Modal methods
+    showEyeProtectionModal() {
+        const modal = document.getElementById('eyeProtectionModal');
+        if (modal) modal.classList.remove('hidden');
+    }
+    
+    hideEyeProtectionModal() {
+        const modal = document.getElementById('eyeProtectionModal');
+        if (modal) modal.classList.add('hidden');
+    }
+    
+    saveEyeProtectionSettings() {
+        const enabledCheckbox = document.getElementById('eyeProtectionEnabled');
+        const intensitySlider = document.getElementById('eyeIntensity');
+        const colorTempSelect = document.getElementById('colorTemperature');
+        
+        if (enabledCheckbox) {
+            this.state.eyeProtectionEnabled = enabledCheckbox.checked;
+        }
+        if (intensitySlider) {
+            this.state.eyeProtectionIntensity = parseInt(intensitySlider.value);
+        }
+        if (colorTempSelect) {
+            this.state.colorTemperature = colorTempSelect.value;
+        }
+        
+        this.updateEyeProtection();
+        this.saveSettings();
+        this.hideEyeProtectionModal();
+        this.showToast('Eye protection settings saved', 'success');
+    }
+    
+    // TOC methods
+    toggleTOC() {
+        this.state.tocOpen = !this.state.tocOpen;
+        const sidebar = document.getElementById('tocSidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('open', this.state.tocOpen);
+        }
+    }
+    
+    closeTOC() {
+        this.state.tocOpen = false;
+        const sidebar = document.getElementById('tocSidebar');
+        if (sidebar) {
+            sidebar.classList.remove('open');
+        }
+    }
+    
+    // Feature methods
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            this.state.isFullscreen = true;
+        } else {
+            document.exitFullscreen();
+            this.state.isFullscreen = false;
+        }
+    }
+    
+    toggleBookmark() {
+        if (!this.state.currentPDF) return;
+        
+        const bookmark = {
+            pdfId: this.state.currentPDF.id,
+            page: this.state.currentPage,
+            title: this.state.currentPDF.title,
+            timestamp: Date.now()
+        };
+        
+        const existingIndex = this.state.bookmarks.findIndex(
+            b => b.pdfId === bookmark.pdfId && b.page === bookmark.page
+        );
+        
+        if (existingIndex >= 0) {
+            this.state.bookmarks.splice(existingIndex, 1);
+            this.showToast('Bookmark removed', 'info');
+        } else {
+            this.state.bookmarks.push(bookmark);
+            this.showToast('Page bookmarked', 'success');
+        }
+        
+        this.saveSettings();
+    }
+    
+    shareCurrentPage() {
+        if (!this.state.currentPDF) return;
+        
+        const shareData = {
+            title: `${this.state.currentPDF.title} - Page ${this.state.currentPage}`,
+            text: `Check out page ${this.state.currentPage} of "${this.state.currentPDF.title}"`,
+            url: window.location.href
+        };
+        
+        if (navigator.share) {
+            navigator.share(shareData);
+        } else {
+            // Fallback: copy to clipboard
+            const url = `${window.location.origin}?pdf=${this.state.currentPDF.filename}&page=${this.state.currentPage}`;
+            navigator.clipboard.writeText(url).then(() => {
+                this.showToast('Link copied to clipboard', 'success');
+            });
+        }
+    }
+    
+    focusSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+    
+    // Utility methods
+    showToast(message, type = 'info') {
+        const toast = document.getElementById('notificationToast');
+        const messageEl = document.getElementById('toastMessage');
+        const iconEl = document.querySelector('.toast-icon');
+        
+        if (!toast || !messageEl || !iconEl) return;
+        
+        const icons = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+        
+        iconEl.textContent = icons[type] || icons.info;
+        messageEl.textContent = message;
+        
+        toast.classList.remove('hidden');
+        
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 3000);
+    }
+    
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+}
+
+// Initialize the application
+let app;
+
+function initPDFReader() {
+    if (!app) {
+        app = new DynamicPDFReader();
+        window.pdfReader = app; // Make globally available for debugging
+    }
+}
+
+// Multiple initialization strategies
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPDFReader);
+} else {
+    initPDFReader();
+}
+
+// Fallback initialization
+setTimeout(initPDFReader, 100);

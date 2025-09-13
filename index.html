@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookReader</title>
+  <link rel="icon" type="image/x-icon" href="/assets/open-book.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>📚 BookReader</h1>
+            </div>
+
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search Books..." class="search-input">
+                <button class="search-btn" id="searchBtn">🔍</button>
+                <button class="search-clear hidden" id="searchClear">✕</button>
+            </div>
+            <div class="header-controls">
+                <div class="theme-controls">
+                    <label class="theme-toggle">
+                        <input type="checkbox" id="themeToggle">
+                        <span class="theme-slider">🌙</span>
+                    </label>
+                </div>
+                
+                <div class="eye-protection">
+                    <button class="btn--outline btn--sm eye-protection-btn" id="eyeProtectionToggle">
+                        👁️ Eye Protection
+                    </button>
+                </div>
+                
+                <!-- <button class="btn--primary login-btn">Login</button> -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Eye Protection Settings Modal -->
+    <div class="modal hidden" id="eyeProtectionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Eye Protection Settings</h3>
+                <button class="modal-close" id="closeEyeModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Intensity Level: <span id="intensityValue">50</span>%</label>
+                    <input type="range" id="eyeIntensity" min="0" max="100" value="50" class="intensity-slider">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="eyeProtectionEnabled" checked>
+                        Enable Eye Protection Mode
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn--secondary btn--sm eye-protection-btn" id="closeEyeModal2">Cancel</button>
+                <button class="btn--primary btn--sm eye-protection-btn" id="saveEyeSettings">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+  <!-- Catalog -->
+  <main class="main-content">
+    <section class="homepage" id="homepage">
+      <div class="container">
+        <div class="hero-section">
+          <h1>Discover Your Next Great Read</h1>
+          <p>Because Every Book Lover Needs a Travel Companion.</p>
+        </div>
+
+        <div class="catalog-section">
+          <div class="section-header">
+            <h2>Your Shelf</h2>
+            <div class="catalog-controls">
+              <select id="categoryFilter" class="form-control">
+                <option value="">All Categories</option>
+              </select>
+              <div class="view-toggle">
+                <button class="btn--outline view-btn active" id="gridView">
+                  <h4>⊞</h4>
+                </button>
+                <button class="btn--outline view-btn" id="listView">
+                  <h4>☰</h4>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="loading-spinner hidden" id="catalogLoader">
+            <div class="spinner"></div><p>Scanning for Books...</p>
+          </div>
+
+          <div class="pdf-grid" id="pdfGrid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/catalog.js"></script>
+</body>
+</html>
