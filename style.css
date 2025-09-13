@@ -2489,8 +2489,30 @@ input:checked + .theme-slider:before {
   /* Base body and html setup */
   body {
     overflow-x: hidden;
+    /* ADDED: Enable touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
   }
   
+  html {
+    /* ADDED: Ensure proper touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
+  }
+  
+  .pdf-viewer-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-1);
+    overflow: auto;
+    position: absolute;
+    /* ADDED: Fix touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
+  }
+
   /* LEVEL 1: Background (lowest z-index) */
   .reading-view {
     height: 100vh;
@@ -2499,8 +2521,11 @@ input:checked + .theme-slider:before {
     overflow: hidden;
     position: relative;
     z-index: 1;
+    /* ADDED: Enable touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
   }
-  
+
   /* LEVEL 2: Mobile header (middle z-index) - visible after loading */
   .mobile-reading-header .reading-toolbar,
   .reading-toolbar {
@@ -2514,10 +2539,12 @@ input:checked + .theme-slider:before {
     left: 0;
     right: 0;
     width: 100vw;
-    z-index: 200; /* Higher than PDF content */
+    z-index: 200;
     box-sizing: border-box;
+    /* ADDED: Allow touch interactions on header */
+    touch-action: auto;
   }
-  
+
   /* First Level: Back + Title */
   .mobile-header-level-1 {
     width: 100%;
@@ -2528,8 +2555,10 @@ input:checked + .theme-slider:before {
     padding-bottom: var(--space-6);
     border-bottom: 1px solid var(--color-border);
     box-sizing: border-box;
+    /* ADDED: Allow touch interactions */
+    touch-action: auto;
   }
-  
+
   .mobile-back-btn {
     flex-shrink: 0;
     min-width: auto;
@@ -2543,12 +2572,14 @@ input:checked + .theme-slider:before {
     display: flex;
     align-items: center;
     gap: var(--space-4);
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
-  
+
   .mobile-back-btn:hover {
     background: var(--color-secondary-hover);
   }
-  
+
   .mobile-pdf-title {
     flex: 1;
     font-weight: var(--font-weight-semibold);
@@ -2560,7 +2591,7 @@ input:checked + .theme-slider:before {
     white-space: nowrap;
     margin-left: var(--space-8);
   }
-  
+
   /* Second Level: Action Buttons */
   .mobile-header-level-2 {
     width: 100%;
@@ -2568,8 +2599,10 @@ input:checked + .theme-slider:before {
     justify-content: center;
     padding-top: var(--space-2);
     box-sizing: border-box;
+    /* ADDED: Allow touch interactions */
+    touch-action: auto;
   }
-  
+
   .mobile-controls-group {
     display: flex;
     align-items: center;
@@ -2578,8 +2611,10 @@ input:checked + .theme-slider:before {
     padding: var(--space-2) var(--space-8);
     border-radius: var(--radius-base);
     border: 1px solid var(--color-border);
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
-  
+
   /* Shrink mobile controls */
   .mobile-controls-group .btn--sm,
   .mobile-controls-group .btn--ghost {
@@ -2592,33 +2627,39 @@ input:checked + .theme-slider:before {
     border: none;
     color: var(--color-text-secondary);
     transition: all var(--duration-fast) var(--ease-standard);
+    /* ADDED: Enable touch interactions for buttons */
+    touch-action: manipulation;
   }
-  
+
   .mobile-controls-group .btn--ghost:hover,
   .mobile-controls-group .btn--ghost:active {
     background: var(--color-secondary-hover);
     color: var(--color-text);
     transform: scale(0.95);
   }
-  
+
   /* Mobile theme toggle */
   .mobile-theme-controls {
     display: flex;
     align-items: center;
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
-  
+
   .mobile-theme-toggle {
     width: 36px;
     height: 20px;
     position: relative;
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
-  
+
   .mobile-theme-toggle input {
     opacity: 0;
     width: 0;
     height: 0;
   }
-  
+
   .mobile-theme-slider {
     position: absolute;
     cursor: pointer;
@@ -2633,8 +2674,10 @@ input:checked + .theme-slider:before {
     align-items: center;
     padding: 0 var(--space-2);
     border: 1px solid var(--color-border);
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
-  
+
   .mobile-theme-slider:before {
     content: "☀️";
     position: absolute;
@@ -2650,23 +2693,25 @@ input:checked + .theme-slider:before {
     font-size: 8px;
     box-shadow: var(--shadow-xs);
   }
-  
+
   .mobile-theme-toggle input:checked + .mobile-theme-slider {
     background-color: var(--color-primary);
   }
-  
+
   .mobile-theme-toggle input:checked + .mobile-theme-slider:before {
     transform: translateX(16px);
     content: "🌙";
   }
-  
+
   .mobile-eye-btn {
     font-size: var(--font-size-sm);
     display: flex;
     align-items: center;
     justify-content: center;
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
-  
+
   .mobile-eye-btn.active {
     background: var(--color-warning) !important;
     color: var(--color-surface) !important;
@@ -2676,13 +2721,16 @@ input:checked + .theme-slider:before {
   .reading-container {
     flex: 1;
     display: flex;
-    flex-direction: column; /* FIXED: Column direction for mobile */
+    flex-direction: column;
     position: relative;
     width: 100vw;
-    height: calc(100vh - 120px); /* Account for header height */
-    margin-top: 120px; /* Space for fixed header */
+    height: calc(100vh - 120px);
+    margin-top: 120px;
     z-index: 100;
     overflow: hidden;
+    /* ADDED: Enable touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
   }
 
   .mobile-pdf-viewer {
@@ -2697,6 +2745,10 @@ input:checked + .theme-slider:before {
     position: relative;
     box-sizing: border-box;
     z-index: 100;
+    /* ADDED: CRITICAL - Enable smooth touch scrolling */
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y pinch-zoom;
+    overscroll-behavior: auto;
   }
 
   .mobile-page-container {
@@ -2709,6 +2761,8 @@ input:checked + .theme-slider:before {
     padding-bottom: var(--space-24);
     box-sizing: border-box;
     z-index: 100;
+    /* ADDED: Enable touch interactions */
+    touch-action: auto;
   }
 
   /* Individual mobile PDF pages - full width, no shadows */
@@ -2717,13 +2771,15 @@ input:checked + .theme-slider:before {
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-card-border);
     overflow: hidden;
-    width: calc(100vw - var(--space-16)); /* Full viewport width minus padding */
+    width: calc(100vw - var(--space-16));
     max-width: calc(100vw - var(--space-16));
     position: relative;
     margin: 0;
     box-shadow: none;
     box-sizing: border-box;
     z-index: 100;
+    /* ADDED: Allow pinch-to-zoom on PDF pages */
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   .mobile-pdf-page:hover {
@@ -2735,8 +2791,14 @@ input:checked + .theme-slider:before {
     width: 100%;
     height: auto;
     display: block;
-    touch-action: pinch-zoom;
+    /* UPDATED: Better touch action for canvas */
+    touch-action: pan-x pan-y pinch-zoom;
     border-radius: 0;
+    /* ADDED: Prevent text selection during touch */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 
   /* Page indicator styling */
@@ -2752,11 +2814,14 @@ input:checked + .theme-slider:before {
     border-radius: var(--radius-sm);
     backdrop-filter: none;
     z-index: 101;
+    /* ADDED: Prevent touch interactions with indicator */
+    pointer-events: none;
+    touch-action: none;
   }
 
   /* LEVEL 4: Loading state (highest z-index) - topmost */
   .pdf-loading {
-    position: fixed !important; /* FIXED: Use fixed positioning */
+    position: fixed !important;
     top: 0;
     left: 0;
     right: 0;
@@ -2764,13 +2829,16 @@ input:checked + .theme-slider:before {
     width: 100vw;
     height: 100vh;
     background-color: var(--color-background);
-    z-index: 9999; /* Highest z-index - topmost */
+    z-index: 9999;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: var(--space-32);
     box-sizing: border-box;
+    /* ADDED: Disable touch interactions during loading */
+    touch-action: none;
+    pointer-events: auto;
   }
 
   .pdf-loading.hidden {
@@ -2807,6 +2875,8 @@ input:checked + .theme-slider:before {
     display: flex;
     align-items: flex-end;
     backdrop-filter: blur(4px);
+    /* ADDED: Enable touch interactions */
+    touch-action: auto;
   }
 
   .mobile-toc-content {
@@ -2817,6 +2887,9 @@ input:checked + .theme-slider:before {
     overflow: hidden;
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--color-border);
+    /* ADDED: Enable touch scrolling in TOC */
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
   }
 
   .mobile-toc-header {
@@ -2829,6 +2902,8 @@ input:checked + .theme-slider:before {
     top: 0;
     background: var(--color-surface);
     z-index: 1;
+    /* ADDED: Enable touch interactions */
+    touch-action: auto;
   }
 
   .mobile-toc-header h3 {
@@ -2841,6 +2916,9 @@ input:checked + .theme-slider:before {
     padding: var(--space-8);
     overflow-y: auto;
     max-height: calc(75vh - 80px);
+    /* ADDED: Enable touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
   }
 
   .mobile-toc-item {
@@ -2855,6 +2933,8 @@ input:checked + .theme-slider:before {
     color: var(--color-text);
     font-size: var(--font-size-sm);
     transition: all var(--duration-fast) var(--ease-standard);
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
 
   .mobile-toc-item:hover,
@@ -2864,10 +2944,13 @@ input:checked + .theme-slider:before {
     transform: translateX(4px);
   }
 
-  /* Smooth scrolling for mobile */
+  /* UPDATED: Smooth scrolling for mobile with better touch support */
   .mobile-pdf-viewer {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    /* ADDED: Additional iOS fixes */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
 
   /* Better touch targets */
@@ -2876,6 +2959,8 @@ input:checked + .theme-slider:before {
   .mobile-toc-item {
     min-height: 44px;
     min-width: 44px;
+    /* ADDED: Enable touch interactions */
+    touch-action: manipulation;
   }
 
   /* Responsive text sizing */
@@ -2897,6 +2982,9 @@ input:checked + .theme-slider:before {
   
   .mobile-pdf-viewer {
     padding: var(--space-6);
+    /* ADDED: Ensure touch scrolling on small devices */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y pinch-zoom;
   }
   
   .mobile-page-container {
@@ -2917,10 +3005,11 @@ input:checked + .theme-slider:before {
     min-width: 36px;
     min-height: 36px;
     padding: var(--space-4);
+    touch-action: manipulation;
   }
   
   .reading-container {
-    margin-top: 100px; /* Adjust for smaller header */
+    margin-top: 100px;
     height: calc(100vh - 100px);
   }
 }
