@@ -1357,7 +1357,14 @@ input:checked + .theme-slider:before {
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-base);
   border: 1px solid var(--color-border);
-  overflow: hidden;
+  overflow: visible; /* CHANGED: Allow content to show */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* ADDED: Ensure proper sizing */
+  min-height: fit-content;
+  height: auto;
+  width: auto;
 }
 
 .pdf-canvas {
@@ -1670,9 +1677,13 @@ input:checked + .theme-slider:before {
   gap: var(--space-16);
   transform-origin: center;
   transition: transform var(--duration-normal) var(--ease-standard);
-  max-width: 100%; /* Prevent overflow */
+  /* max-width: 100%; Prevent overflow */
   justify-content: center;
-  align-items: flex-start;
+  align-items: flex-start; /* CHANGED: Align to top instead of center */
+  height: fit-content;
+  /* ADDED: Allow content to determine height */
+  min-height: 0;
+  overflow: visible;
 }
 
 .pdf-page-container {
@@ -1691,6 +1702,7 @@ input:checked + .theme-slider:before {
   width: 100%;
   height: auto;
   max-width: 100%;
+  object-fit: contain;
 }
 
 /* Fix loading states */
@@ -2770,7 +2782,7 @@ input:checked + .theme-slider:before {
     background-color: var(--color-surface);
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-card-border);
-    overflow: hidden;
+    overflow: visible; /* CHANGED: Allow content to show */
     width: calc(100vw - var(--space-16));
     max-width: calc(100vw - var(--space-16));
     position: relative;
@@ -2780,6 +2792,8 @@ input:checked + .theme-slider:before {
     z-index: 100;
     /* ADDED: Allow pinch-to-zoom on PDF pages */
     touch-action: pan-x pan-y pinch-zoom;
+    min-height: fit-content;
+    height: auto;
   }
 
   .mobile-pdf-page:hover {
@@ -2799,6 +2813,22 @@ input:checked + .theme-slider:before {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+    /* ADDED: Prevent canvas from being cut off */
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+    .mobile-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    padding-bottom: var(--space-24);
+    box-sizing: border-box;
+    z-index: 100;
+    overflow: visible; /* ADDED */
   }
 
   /* Page indicator styling */

@@ -243,30 +243,50 @@ class ViewerApp {
                 pageDiv.appendChild(indicator);
                 container.appendChild(pageDiv);
                 
-                // Render page
+                // FIXED: Better mobile rendering calculations
                 const page = await this.pdfDoc.getPage(pageNum);
-                const scale = Math.min(
-                    (window.innerWidth - 24) / page.getViewport({ scale: 1 }).width,
-                    1.5 // Max scale for mobile
-                );
-                const viewport = page.getViewport({ scale });
+                const dpr = window.devicePixelRatio || 1;
                 
+                // Get base viewport for proper scaling
+                const baseViewport = page.getViewport({ scale: 1 });
+                
+                // FIXED: Better mobile scaling calculation
+                const containerWidth = window.innerWidth - 32; // Account for padding
+                const baseScale = Math.min(containerWidth / baseViewport.width, 1.8); // Increased max scale
+                
+                // Calculate final scale with DPR
+                const finalScale = baseScale * dpr;
+                const viewport = page.getViewport({ scale: finalScale });
+                
+                // Set canvas internal size (high resolution)
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
                 
+                // FIXED: Set display size using base calculations
+                const displayWidth = baseViewport.width * baseScale;
+                const displayHeight = baseViewport.height * baseScale;
+                
+                canvas.style.width = `${displayWidth}px`;
+                canvas.style.height = `${displayHeight}px`;
+                
+                const context = canvas.getContext('2d');
+                
+                // FIXED: Let PDF.js handle the scaling
                 await page.render({
-                    canvasContext: canvas.getContext('2d'),
+                    canvasContext: context,
                     viewport: viewport
                 }).promise;
                 
                 this.mobilePages.push(canvas);
+                
+                // console.log(`Rendered mobile page ${pageNum} - Canvas: ${canvas.width}x${canvas.height}, Display: ${displayWidth}x${displayHeight}`);
                 
             } catch (error) {
                 console.error(`Error rendering mobile page ${pageNum}:`, error);
             }
         }
         
-        console.log(`Rendered ${this.mobilePages.length} mobile pages`);
+        console.log(`Rendered ${this.mobilePages.length} high-resolution mobile pages`);
     }
     
     showMobileTOC() {
@@ -587,10 +607,27 @@ class ViewerApp {
         
         try {
             const page = await this.pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: this.zoom });
             
+            // FIXED: Better scaling calculation
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Get the base viewport to calculate proper dimensions
+            const baseViewport = page.getViewport({ scale: 1 });
+            
+            // Calculate the final scale including zoom and DPR
+            const finalScale = this.zoom * dpr;
+            const viewport = page.getViewport({ scale: finalScale });
+            
+            // Set canvas internal size (high resolution)
             canvas.width = viewport.width;
             canvas.height = viewport.height;
+            
+            // FIXED: Set canvas display size properly
+            const displayWidth = baseViewport.width * this.zoom;
+            const displayHeight = baseViewport.height * this.zoom;
+            
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
             canvas.style.display = 'block';
             
             const container = canvas.parentElement;
@@ -599,6 +636,8 @@ class ViewerApp {
             }
             
             const context = canvas.getContext('2d');
+            
+            // FIXED: Don't scale the context - let PDF.js handle it
             await page.render({ 
                 canvasContext: context, 
                 viewport: viewport 
@@ -609,7 +648,7 @@ class ViewerApp {
                 pageNumberElement.textContent = pageNum;
             }
             
-            console.log(`Rendered page ${pageNum}`);
+            // console.log(`Rendered high-res page ${pageNum} - Canvas: ${canvas.width}x${canvas.height}, Display: ${displayWidth}x${displayHeight}`);
             
         } catch (error) {
             console.error(`Error rendering page ${pageNum}:`, error);
