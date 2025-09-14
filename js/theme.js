@@ -24,6 +24,5 @@ export class ThemeManager {
     updateTheme() {
         const scheme = this.state.state.darkMode ? 'dark' : 'light';
         document.documentElement.setAttribute('data-color-scheme', scheme);
-        console.log('Theme updated to:', scheme);
     }
 }

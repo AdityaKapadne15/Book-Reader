@@ -36,7 +36,6 @@ class CatalogApp {
         const categoryFilter = document.getElementById('categoryFilter');
         
         if (searchInput) {
-            console.log('Binding search events');
             
             // FIXED: Use a single, debounced input handler
             let searchTimeout;
@@ -46,7 +45,6 @@ class CatalogApp {
                 
                 searchTimeout = setTimeout(() => {
                     const query = e.target.value.trim().toLowerCase();
-                    console.log('Search query updated:', query);
                     
                     // Update state
                     this.state.setState({ searchQuery: query });
@@ -77,11 +75,9 @@ class CatalogApp {
         }
         
         if (categoryFilter) {
-            console.log('Binding category filter events');
             
             categoryFilter.addEventListener('change', (e) => {
                 const category = e.target.value;
-                console.log('Category filter changed:', category);
                 
                 this.state.setState({ selectedCategory: category });
                 this.renderCatalog();
@@ -106,10 +102,6 @@ class CatalogApp {
         
         let filtered = [...this.pdfs];
         
-        console.log('Original PDFs count:', filtered.length);
-        console.log('Search query:', this.state.state.searchQuery);
-        console.log('Selected category:', this.state.state.selectedCategory);
-        
         // Apply search filter - more comprehensive search
         if (this.state.state.searchQuery && this.state.state.searchQuery.length > 0) {
             const query = this.state.state.searchQuery.toLowerCase();
@@ -122,13 +114,11 @@ class CatalogApp {
                 
                 return titleMatch || descMatch || authorMatch || categoryMatch;
             });
-            console.log('After search filter:', filtered.length);
         }
         
         // Apply category filter
         if (this.state.state.selectedCategory && this.state.state.selectedCategory !== '') {
             filtered = filtered.filter(pdf => pdf.category === this.state.state.selectedCategory);
-            console.log('After category filter:', filtered.length);
         }
         
         if (filtered.length === 0) {
@@ -167,20 +157,15 @@ class CatalogApp {
                 window.location.href = `viewer.html?pdf=${encodeURIComponent(filename)}`;
             });
         });
-        
-        console.log(`Rendered ${filtered.length} PDF cards`);
     }
         
     async loadCatalog() {
         const loader = document.getElementById('catalogLoader');
         const grid = document.getElementById('pdfGrid');
         
-        console.log('Starting catalog load...');
-        
         // Show loader
         if (loader) {
             loader.classList.remove('hidden');
-            console.log('Loader shown');
         }
         
         try {
@@ -190,7 +175,6 @@ class CatalogApp {
                 res = await fetch('assets/pdf-list.json');
                 if (res.ok) {
                     this.pdfs = await res.json();
-                    console.log('Loaded PDFs from JSON:', this.pdfs.length);
                 } else {
                     throw new Error('JSON file not found');
                 }
@@ -234,7 +218,6 @@ class CatalogApp {
             // REMOVED: The performance-killing PDF page count extraction
             // Now render immediately with pre-defined page counts from JSON
             
-            console.log('Populating category filter and rendering catalog...');
             this.populateCategoryFilter();
             this.renderCatalog();
             
@@ -250,14 +233,12 @@ class CatalogApp {
             // Hide loader
             if (loader) {
                 loader.classList.add('hidden');
-                console.log('Loader hidden');
             }
         }
     }
 
     // ADDED: Optional background page count loading (doesn't block UI)
     async loadPageCountsAsync() {
-        console.log('Loading page counts in background...');
         
         for (let pdf of this.pdfs) {
             try {
@@ -271,7 +252,6 @@ class CatalogApp {
                     // Only update if different from pre-defined value
                     if (pdf.pages !== actualPages) {
                         pdf.pages = actualPages;
-                        console.log(`Updated page count for ${pdf.filename}: ${actualPages}`);
                         
                         // Re-render only this specific card
                         this.updateSingleCard(pdf);
@@ -283,7 +263,6 @@ class CatalogApp {
             }
         }
         
-        console.log('Background page count loading completed');
     }
 
     // ADDED: Update a single card without re-rendering everything
@@ -315,10 +294,6 @@ class CatalogApp {
         
         let filtered = [...this.pdfs];
         
-        console.log('Original PDFs count:', filtered.length);
-        console.log('Search query:', this.state.state.searchQuery);
-        console.log('Selected category:', this.state.state.selectedCategory);
-        
         // FIXED: Apply search filter with better logic
         if (this.state.state.searchQuery && this.state.state.searchQuery.trim().length > 0) {
             const query = this.state.state.searchQuery.toLowerCase().trim();
@@ -331,13 +306,11 @@ class CatalogApp {
                 
                 return titleMatch || descMatch || authorMatch || categoryMatch;
             });
-            console.log('After search filter:', filtered.length);
         }
         
         // Apply category filter
         if (this.state.state.selectedCategory && this.state.state.selectedCategory !== '') {
             filtered = filtered.filter(pdf => pdf.category === this.state.state.selectedCategory);
-            console.log('After category filter:', filtered.length);
         }
         
         // Handle empty results
@@ -379,8 +352,6 @@ class CatalogApp {
                 window.location.href = `viewer.html?pdf=${encodeURIComponent(filename)}`;
             });
         });
-        
-        console.log(`Rendered ${filtered.length} PDF cards`);
     }
     
     switchView(viewType) {

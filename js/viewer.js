@@ -118,8 +118,6 @@ class ViewerApp {
     setupMobileViewer() {
         if (!this.isMobile) return;
         
-        console.log('Setting up mobile viewer');
-        
         try {
             this.createMobileViewerHTML();
             this.createMobileHeader();
@@ -145,9 +143,7 @@ class ViewerApp {
         toolbar.innerHTML = `
             <!-- First Level: Back button and title -->
             <div class="mobile-header-level-1">
-                <button class="btn--outline btn btn--ghost btn--round btn--floating">
-                <a href="index.html">❮❮</a>
-                </button>
+                <a href="index.html" class="btn--outline btn btn--ghost btn--round btn--floating">❮❮</a>
                 <span class="pdf-title mobile-pdf-title" id="currentPdfTitle">Loading...</span>
             </div>
             
@@ -165,11 +161,16 @@ class ViewerApp {
                         <button class="btn--sm btn--ghost mobile-eye-btn ${this.state.state.eyeProtectionEnabled ? 'active' : ''}" id="eyeProtectionToggle">👁️</button>
                     </div>
                     
-                    <button class="btn--sm btn--ghost" id="toggleTOC">📋</button>
-                    <button class="btn--sm btn--ghost" id="fullscreenBtn">⛶</button>
+                    <button class="btn--sm btn--ghost mobile-toc-btn" id="toggleTOC" type="button">📋</button>
+                    <button class="btn--sm btn--ghost mobile-fullscreen-btn" id="fullscreenBtn" type="button">⛶</button>
                 </div>
             </div>
         `;
+        
+        // IMPORTANT: Re-bind mobile events after DOM changes
+        setTimeout(() => {
+            this.bindMobileEvents();
+        }, 100);
         
         // Re-initialize theme and eye protection managers to bind to new elements
         this.themeManager = new ThemeManager(this.state);
@@ -214,18 +215,28 @@ class ViewerApp {
                 if (this.handleTOCClick) {
                     tocBtn.removeEventListener('click', this.handleTOCClick);
                 }
-                this.handleTOCClick = () => this.showMobileTOC();
+                this.handleTOCClick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.showMobileTOC();
+                };
                 tocBtn.addEventListener('click', this.handleTOCClick);
+            } else {
+                console.warn('TOC button not found in mobile mode');
             }
-
-            // ADDED: Fullscreen button for mobile
+            
+            // Fullscreen button for mobile
             const fullscreenBtn = document.getElementById('fullscreenBtn');
             if (fullscreenBtn) {
                 // Remove existing listener to prevent duplicates
                 if (this.handleFullscreenClick) {
                     fullscreenBtn.removeEventListener('click', this.handleFullscreenClick);
                 }
-                this.handleFullscreenClick = () => this.toggleFullscreen();
+                this.handleFullscreenClick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleFullscreen();
+                };
                 fullscreenBtn.addEventListener('click', this.handleFullscreenClick);
             }
             
@@ -251,8 +262,6 @@ class ViewerApp {
         const container = document.getElementById('mobilePageContainer');
         if (!container) return;
         
-        console.log('Setting up mobile lazy loading...');
-        
         // Clear existing pages
         container.innerHTML = '';
         this.mobilePages = [];
@@ -264,7 +273,6 @@ class ViewerApp {
         // Setup intersection observer for lazy loading
         this.setupMobileLazyLoading();
         
-        console.log(`Created ${this.totalPages} page placeholders with lazy loading`);
     }
 
     // NEW: Create lightweight placeholders
@@ -273,6 +281,7 @@ class ViewerApp {
             const pageDiv = document.createElement('div');
             pageDiv.className = 'mobile-pdf-page';
             pageDiv.setAttribute('data-page', pageNum);
+            pageDiv.setAttribute('id', `mobilePage${pageNum}Container`); // ADDED: Container ID
             
             // Lightweight placeholder
             const placeholder = document.createElement('div');
@@ -329,7 +338,6 @@ class ViewerApp {
     // NEW: Render single mobile page
     async renderSingleMobilePage(pageNum, pageDiv) {
         try {
-            console.log(`Lazy loading page ${pageNum}`);
             
             // Remove placeholder
             const placeholder = pageDiv.querySelector('.mobile-page-placeholder');
@@ -439,6 +447,75 @@ class ViewerApp {
         document.addEventListener('keydown', handleEscape);
     }
     
+    // NEW: Render single mobile page with proper ID management
+    async renderSingleMobilePage(pageNum, pageDiv) {
+        try {
+            
+            // Remove placeholder
+            const placeholder = pageDiv.querySelector('.mobile-page-placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            // Create canvas with consistent ID
+            const canvas = document.createElement('canvas');
+            canvas.id = `mobilePage${pageNum}`;
+            canvas.setAttribute('data-page-num', pageNum); // ADDED: Extra data attribute
+            
+            // Insert canvas before indicator
+            const indicator = pageDiv.querySelector('.mobile-page-indicator');
+            pageDiv.insertBefore(canvas, indicator);
+            
+            // ADDED: Ensure the page div has proper data attribute
+            pageDiv.setAttribute('data-page', pageNum);
+            pageDiv.setAttribute('id', `mobilePage${pageNum}Container`);
+            
+            // Render page with optimized settings
+            const page = await this.pdfDoc.getPage(pageNum);
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            
+            const baseViewport = page.getViewport({ scale: 1 });
+            const containerWidth = window.innerWidth - 32;
+            const baseScale = Math.min(containerWidth / baseViewport.width, 1.5);
+            
+            const finalScale = baseScale * dpr;
+            const viewport = page.getViewport({ scale: finalScale });
+            
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            
+            const displayWidth = baseViewport.width * baseScale;
+            const displayHeight = baseViewport.height * baseScale;
+            
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
+            
+            const context = canvas.getContext('2d');
+            
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            this.mobilePages[pageNum - 1] = canvas;
+            
+            
+        } catch (error) {
+            console.error(`Error rendering mobile page ${pageNum}:`, error);
+            
+            // Show error placeholder
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'mobile-page-error';
+            errorDiv.innerHTML = `
+                <div class="error-content">
+                    <div class="error-icon">⚠️</div>
+                    <div class="error-text">Failed to load page ${pageNum}</div>
+                </div>
+            `;
+            pageDiv.appendChild(errorDiv);
+        }
+    }
+
     generateMobileTOC() {
         const tocItems = document.getElementById('mobileTocItems');
         if (!tocItems) return;
@@ -466,24 +543,51 @@ class ViewerApp {
         tocItems.querySelectorAll('.mobile-toc-item').forEach(item => {
             item.addEventListener('click', () => {
                 const pageNum = parseInt(item.getAttribute('data-page'));
-                this.scrollToMobilePage(pageNum);
                 
-                // Safely close modal
-                safeRemoveElement('.mobile-toc-modal');
+                // Validate page number
+                if (pageNum >= 1 && pageNum <= this.totalPages) {
+                    this.scrollToMobilePage(pageNum);
+                    
+                    // Close modal after short delay
+                    setTimeout(() => {
+                        safeRemoveElement('.mobile-toc-modal');
+                    }, 300);
+                } else {
+                    console.error(`Invalid page number: ${pageNum} (total: ${this.totalPages})`);
+                }
             });
         });
     }
     
     scrollToMobilePage(pageNum) {
         try {
-            const pageElement = document.getElementById(`mobilePage${pageNum}`);
-            if (pageElement) {
-                pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                console.warn(`Mobile page ${pageNum} not found`);
+            
+            const mobileViewer = document.getElementById('mobilePdfViewer');
+            if (!mobileViewer) {
+                console.error('Mobile viewer not found');
+                return;
             }
+            
+            // Simple approach: scroll by percentage
+            const scrollPercent = Math.max(0, (pageNum - 1) / this.totalPages);
+            const maxScroll = mobileViewer.scrollHeight - mobileViewer.clientHeight;
+            const targetScroll = scrollPercent * maxScroll;
+            
+            // Scroll to calculated position
+            mobileViewer.scrollTo({
+                top: targetScroll,
+                behavior: 'smooth'
+            });
+            
+            // Also try to find and load the specific page
+            const pageElement = document.querySelector(`[data-page="${pageNum}"]`);
+            if (pageElement && this.pageObserver) {
+                // Force lazy loading for this page
+                this.pageObserver.observe(pageElement);
+            }
+            
         } catch (error) {
-            console.error('Error scrolling to mobile page:', error);
+            console.error('Error scrolling to page:', error);
         }
     }
     
@@ -517,6 +621,16 @@ class ViewerApp {
                     this.renderPages();
                 }
             }
+            
+            // ADDED: Rebind appropriate events after viewport change
+            setTimeout(() => {
+                if (this.isMobile) {
+                    this.bindMobileEvents();
+                } else {
+                    this.bindEvents();
+                }
+            }, 200);
+            
         } catch (error) {
             console.error('Error handling viewport change:', error);
         }
@@ -578,19 +692,23 @@ class ViewerApp {
         document.getElementById('zoomIn')?.addEventListener('click', () => this.zoomIn());
         document.getElementById('zoomOut')?.addEventListener('click', () => this.zoomOut());
         
-        // TOC toggle
-        document.getElementById('toggleTOC')?.addEventListener('click', () => {
-            if (this.isMobile) {
-                this.showMobileTOC();
-            } else {
+        // TOC toggle - UPDATED: Check if mobile mode
+        const tocBtn = document.getElementById('toggleTOC');
+        if (tocBtn && !this.isMobile) {
+            // Only bind desktop TOC events if not mobile
+            tocBtn.addEventListener('click', () => {
                 this.toggleTOC();
-            }
-        });
+            });
+        }
         
         document.getElementById('closeTOC')?.addEventListener('click', () => this.closeTOC());
         
-        // Fullscreen
-        document.getElementById('fullscreenBtn')?.addEventListener('click', () => this.toggleFullscreen());
+        // Fullscreen - UPDATED: Check if mobile mode
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        if (fullscreenBtn && !this.isMobile) {
+            // Only bind desktop fullscreen events if not mobile
+            fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        }
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
@@ -604,8 +722,6 @@ class ViewerApp {
         const progressFill = document.getElementById('loadingProgress');
         const progressPercent = document.getElementById('loadingPercent');
         
-        console.log('Starting PDF load for:', this.filename);
-        
         if (loader) {
             loader.classList.remove('hidden');
         }
@@ -616,8 +732,6 @@ class ViewerApp {
         try {
             // PERFORMANCE: Load title in parallel, don't block PDF loading
             this.loadPDFTitleAsync(); // Non-blocking
-            
-            console.log('Loading PDF:', this.filename);
             
             const loadingTask = pdfjsLib.getDocument({
                 url: `assets/${this.filename}`,
@@ -637,7 +751,6 @@ class ViewerApp {
             this.pdfDoc = await loadingTask.promise;
             this.totalPages = this.pdfDoc.numPages;
             
-            console.log('PDF loaded successfully. Total pages:', this.totalPages);
             
             if (progressFill) progressFill.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';
@@ -650,8 +763,6 @@ class ViewerApp {
             }
             
             this.generateTOC();
-            
-            console.log('PDF rendering complete');
             
         } catch (error) {
             console.error('Failed to load PDF:', error);
@@ -765,8 +876,6 @@ class ViewerApp {
             return;
         }
         
-        console.log(`Rendering pages ${this.currentPage} and ${this.currentPage + 1}`);
-        
         await this.renderPage(this.currentPage, leftCanvas);
         if (this.currentPage + 1 <= this.totalPages) {
             await this.renderPage(this.currentPage + 1, rightCanvas);
@@ -839,7 +948,6 @@ class ViewerApp {
         if (this.currentZoomIndex < this.zoomLevels.length - 1) {
             this.currentZoomIndex++;
             this.zoom = this.zoomLevels[this.currentZoomIndex];
-            console.log(`Zooming in to ${Math.round(this.zoom * 100)}%`);
             this.renderPages();
         }
     }
@@ -848,7 +956,6 @@ class ViewerApp {
         if (this.currentZoomIndex > 0) {
             this.currentZoomIndex--;
             this.zoom = this.zoomLevels[this.currentZoomIndex];
-            console.log(`Zooming out to ${Math.round(this.zoom * 100)}%`);
             this.renderPages();
         }
     }

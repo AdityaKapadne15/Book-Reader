@@ -58,14 +58,16 @@ export class EyeProtectionManager {
                 saveBtn.addEventListener('click', () => this.saveSettings());
             }
             
-            // Intensity slider
+            // UPDATED: Intensity slider with track styling
             const intensitySlider = modal.querySelector('#eyeIntensity');
             if (intensitySlider) {
                 intensitySlider.addEventListener('input', (e) => {
                     const valueDisplay = modal.querySelector('#intensityValue');
                     if (valueDisplay) {
-                        valueDisplay.textContent = e.target.value;
+                        valueDisplay.textContent = e.target.value + '%';
                     }
+                    // Update slider track styling
+                    this.updateSliderTrack(intensitySlider);
                 });
             }
             
@@ -78,6 +80,13 @@ export class EyeProtectionManager {
         }
     }
     
+    // NEW: Update slider track styling
+    updateSliderTrack(slider) {
+        const value = slider.value;
+        const percentage = value / 100;
+        slider.style.background = `linear-gradient(to right, #8B5CF6 0%, #8B5CF6 ${percentage * 100}%, #404040 ${percentage * 100}%, #404040 100%)`;
+    }
+    
     showModal() {
         const modal = document.getElementById('eyeProtectionModal');
         if (modal) {
@@ -87,15 +96,51 @@ export class EyeProtectionManager {
             const enabledCheckbox = modal.querySelector('#eyeProtectionEnabled');
             const intensitySlider = modal.querySelector('#eyeIntensity');
             const intensityValue = modal.querySelector('#intensityValue');
+            const colorTempDropdown = modal.querySelector('#colorTemperature');
             
             if (enabledCheckbox) {
                 enabledCheckbox.checked = this.state.state.eyeProtectionEnabled;
             }
             if (intensitySlider && intensityValue) {
                 intensitySlider.value = this.state.state.eyeProtectionIntensity;
-                intensityValue.textContent = this.state.state.eyeProtectionIntensity;
+                intensityValue.textContent = this.state.state.eyeProtectionIntensity + '%';
+                // Initialize slider styling
+                this.updateSliderTrack(intensitySlider);
+            }
+            
+            // ADDED: Initialize dropdown and bind its events
+            if (colorTempDropdown) {
+                // Set default value
+                colorTempDropdown.value = this.state.state.colorTemperature || '4000';
+                
+                // Bind change event
+                colorTempDropdown.addEventListener('change', (e) => {
+                    console.log('Color temperature changed to:', e.target.value);
+                    this.state.setState({ colorTemperature: e.target.value });
+                    this.updateColorTemperature(e.target.value);
+                });
             }
         }
+    }
+    
+    // NEW: Handle color temperature changes
+    updateColorTemperature(temperature) {
+        const overlay = document.getElementById('eyeProtectionOverlay');
+        if (!overlay) return;
+        
+        let color;
+        switch(temperature) {
+            case '3000':
+                color = 'rgba(255, 200, 87, var(--eye-protection-intensity, 0))'; // Warm
+                break;
+            case '6500':
+                color = 'rgba(173, 216, 255, var(--eye-protection-intensity, 0))'; // Cool
+                break;
+            default:
+                color = 'rgba(255, 200, 87, var(--eye-protection-intensity, 0))'; // Neutral
+        }
+        
+        overlay.style.background = color;
     }
     
     hideModal() {
@@ -111,6 +156,7 @@ export class EyeProtectionManager {
         
         const enabledCheckbox = modal.querySelector('#eyeProtectionEnabled');
         const intensitySlider = modal.querySelector('#eyeIntensity');
+        const colorTempDropdown = modal.querySelector('#colorTemperature');
         
         const updates = {};
         
@@ -120,12 +166,64 @@ export class EyeProtectionManager {
         if (intensitySlider) {
             updates.eyeProtectionIntensity = parseInt(intensitySlider.value);
         }
+        if (colorTempDropdown) {
+            updates.colorTemperature = colorTempDropdown.value;
+        }
         
         this.state.setState(updates);
         this.updateEyeProtection();
+        this.updateColorTemperature(updates.colorTemperature || '4000');
         this.hideModal();
         
         console.log('Eye protection settings saved:', updates);
+        
+        // Show success message
+        this.showToast('Eye protection settings saved!');
+    }
+    
+    // NEW: Show toast notification
+    showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast eye-protection-toast';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <span class="toast-icon">👁️</span>
+                <span class="toast-message">${message}</span>
+            </div>
+        `;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2a2a2a;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Show toast
+        setTimeout(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Hide and remove toast
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
     }
     
     updateEyeProtection() {

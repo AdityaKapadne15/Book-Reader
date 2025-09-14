@@ -48,30 +48,51 @@
     </div>
   </header>
 
-  <!-- Eye Protection Settings Modal (same as index.html) -->
+  <!-- Updated Eye Protection Settings Modal -->
   <div class="modal hidden" id="eyeProtectionModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Eye Protection Settings</h3>
-        <button class="modal-close" id="closeEyeModal">×</button>
+      <div class="modal-backdrop"></div>
+      <div class="modal-content eye-protection-modal">
+          <div class="modal-header">
+              <h3>Eye Protection Settings</h3>
+              <button class="modal-close" id="closeEyeModal">×</button>
+          </div>
+          
+          <div class="modal-body">
+              <div class="form-group">
+                  <label class="form-label">Intensity Level: <span id="intensityValue">48%</span></label>
+                  <div class="slider-container">
+                      <input type="range" id="eyeIntensity" min="0" max="100" value="48" class="intensity-slider">
+                  </div>
+              </div>
+              
+              <div class="form-group">
+                  <label class="toggle-switch-label">
+                      <div class="toggle-switch">
+                          <input type="checkbox" id="eyeProtectionEnabled" checked>
+                          <span class="toggle-slider"></span>
+                      </div>
+                      <span class="toggle-text">Enable Eye Protection Mode</span>
+                  </label>
+              </div>
+              
+              <div class="form-group">
+                  <label class="form-label">Color Temperature</label>
+                  <div class="dropdown-container">
+                      <select id="colorTemperature" class="color-temp-dropdown">
+                          <option value="3000">Warm (3000K)</option>
+                          <option value="4000" selected>Neutral (4000K)</option>
+                          <option value="6500">Cool (6500K)</option>
+                      </select>
+                      <div class="dropdown-arrow">▼</div>
+                  </div>
+              </div>
+          </div>
+          
+          <div class="modal-footer">
+              <button class="btn btn--secondary" id="closeEyeModal2">Cancel</button>
+              <button class="btn btn--primary" id="saveEyeSettings">Save Settings</button>
+          </div>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Intensity Level: <span id="intensityValue">50</span>%</label>
-          <input type="range" id="eyeIntensity" min="0" max="100" value="50" class="intensity-slider">
-        </div>
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="eyeProtectionEnabled" checked>
-            Enable Eye Protection Mode
-          </label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn--secondary btn--sm eye-protection-btn" id="closeEyeModal2">Cancel</button>
-        <button class="btn--primary btn--sm eye-protection-btn" id="saveEyeSettings">Save Settings</button>
-      </div>
-    </div>
   </div>
 
   <!-- Viewer -->

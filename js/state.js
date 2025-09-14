@@ -5,6 +5,7 @@ export class AppState {
             darkMode: false,
             eyeProtectionEnabled: false,
             eyeProtectionIntensity: 50,
+            colorTemperature: '4000', // ADDED: Default color temperature
             searchQuery: '',
             selectedCategory: ''
         };
@@ -20,6 +21,7 @@ export class AppState {
                 this.state.darkMode = settings.darkMode ?? false;
                 this.state.eyeProtectionEnabled = settings.eyeProtectionEnabled ?? false;
                 this.state.eyeProtectionIntensity = settings.eyeProtectionIntensity ?? 50;
+                this.state.colorTemperature = settings.colorTemperature ?? '4000'; // ADDED
             }
         } catch (e) {
             console.warn('Failed to load settings:', e);
@@ -31,7 +33,8 @@ export class AppState {
             const settings = {
                 darkMode: this.state.darkMode,
                 eyeProtectionEnabled: this.state.eyeProtectionEnabled,
-                eyeProtectionIntensity: this.state.eyeProtectionIntensity
+                eyeProtectionIntensity: this.state.eyeProtectionIntensity,
+                colorTemperature: this.state.colorTemperature // ADDED
             };
             localStorage.setItem('pdfReaderSettings', JSON.stringify(settings));
         } catch (e) {
