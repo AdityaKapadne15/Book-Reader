@@ -51,6 +51,7 @@ class ViewerApp {
         this.mobilePages = [];
         this.handleTOCClick = null;
         this.handleMobileScroll = null;
+        this.handleFullscreenClick = null;
         
         this.init();
     }
@@ -82,8 +83,35 @@ class ViewerApp {
             }
         });
         
+        // ADDED: Handle fullscreen change events
+        document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('webkitfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('msfullscreenchange', () => this.handleFullscreenChange());
+        
         if (this.isMobile) {
             this.setupMobileViewer();
+        }
+    }
+
+    // ADDED: Handle fullscreen state changes
+    handleFullscreenChange() {
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        if (!fullscreenBtn) return;
+        
+        const isFullscreen = !!(
+            document.fullscreenElement || 
+            document.webkitFullscreenElement || 
+            document.mozFullScreenElement || 
+            document.msFullscreenElement
+        );
+        
+        if (isFullscreen) {
+            fullscreenBtn.innerHTML = '⤢';
+            fullscreenBtn.title = 'Exit Fullscreen';
+        } else {
+            fullscreenBtn.innerHTML = '⛶';
+            fullscreenBtn.title = 'Enter Fullscreen';
         }
     }
     
@@ -189,6 +217,17 @@ class ViewerApp {
                 this.handleTOCClick = () => this.showMobileTOC();
                 tocBtn.addEventListener('click', this.handleTOCClick);
             }
+
+            // ADDED: Fullscreen button for mobile
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            if (fullscreenBtn) {
+                // Remove existing listener to prevent duplicates
+                if (this.handleFullscreenClick) {
+                    fullscreenBtn.removeEventListener('click', this.handleFullscreenClick);
+                }
+                this.handleFullscreenClick = () => this.toggleFullscreen();
+                fullscreenBtn.addEventListener('click', this.handleFullscreenClick);
+            }
             
             // Handle mobile scroll
             const mobileViewer = document.getElementById('mobilePdfViewer');
@@ -212,81 +251,143 @@ class ViewerApp {
         const container = document.getElementById('mobilePageContainer');
         if (!container) return;
         
-        console.log('Rendering mobile pages...');
+        console.log('Setting up mobile lazy loading...');
         
         // Clear existing pages
         container.innerHTML = '';
         this.mobilePages = [];
         
-        // Show loading indicator
-        container.innerHTML = '<div class="mobile-loading">Loading pages...</div>';
+        // PERFORMANCE FIX: Create placeholders for all pages (instant)
+        // Only render pages that are visible or near visible
+        this.createMobilePagePlaceholders(container);
         
-        // Render all pages for mobile scrolling
+        // Setup intersection observer for lazy loading
+        this.setupMobileLazyLoading();
+        
+        console.log(`Created ${this.totalPages} page placeholders with lazy loading`);
+    }
+
+    // NEW: Create lightweight placeholders
+    createMobilePagePlaceholders(container) {
         for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
-            try {
-                if (pageNum === 1) {
-                    // Clear loading indicator after first page starts rendering
-                    container.innerHTML = '';
-                }
-                
-                const pageDiv = document.createElement('div');
-                pageDiv.className = 'mobile-pdf-page';
-                
-                const canvas = document.createElement('canvas');
-                canvas.id = `mobilePage${pageNum}`;
-                
-                const indicator = document.createElement('div');
-                indicator.className = 'mobile-page-indicator';
-                indicator.textContent = `Page ${pageNum} of ${this.totalPages}`;
-                
-                pageDiv.appendChild(canvas);
-                pageDiv.appendChild(indicator);
-                container.appendChild(pageDiv);
-                
-                // FIXED: Better mobile rendering calculations
-                const page = await this.pdfDoc.getPage(pageNum);
-                const dpr = window.devicePixelRatio || 1;
-                
-                // Get base viewport for proper scaling
-                const baseViewport = page.getViewport({ scale: 1 });
-                
-                // FIXED: Better mobile scaling calculation
-                const containerWidth = window.innerWidth - 32; // Account for padding
-                const baseScale = Math.min(containerWidth / baseViewport.width, 1.8); // Increased max scale
-                
-                // Calculate final scale with DPR
-                const finalScale = baseScale * dpr;
-                const viewport = page.getViewport({ scale: finalScale });
-                
-                // Set canvas internal size (high resolution)
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                
-                // FIXED: Set display size using base calculations
-                const displayWidth = baseViewport.width * baseScale;
-                const displayHeight = baseViewport.height * baseScale;
-                
-                canvas.style.width = `${displayWidth}px`;
-                canvas.style.height = `${displayHeight}px`;
-                
-                const context = canvas.getContext('2d');
-                
-                // FIXED: Let PDF.js handle the scaling
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-                
-                this.mobilePages.push(canvas);
-                
-                // console.log(`Rendered mobile page ${pageNum} - Canvas: ${canvas.width}x${canvas.height}, Display: ${displayWidth}x${displayHeight}`);
-                
-            } catch (error) {
-                console.error(`Error rendering mobile page ${pageNum}:`, error);
-            }
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'mobile-pdf-page';
+            pageDiv.setAttribute('data-page', pageNum);
+            
+            // Lightweight placeholder
+            const placeholder = document.createElement('div');
+            placeholder.className = 'mobile-page-placeholder';
+            placeholder.innerHTML = `
+                <div class="page-placeholder-content">
+                    <div class="placeholder-icon">📄</div>
+                    <div class="placeholder-text">Page ${pageNum}</div>
+                </div>
+            `;
+            
+            const indicator = document.createElement('div');
+            indicator.className = 'mobile-page-indicator';
+            indicator.textContent = `Page ${pageNum} of ${this.totalPages}`;
+            
+            pageDiv.appendChild(placeholder);
+            pageDiv.appendChild(indicator);
+            container.appendChild(pageDiv);
         }
+    }
+
+    // NEW: Setup intersection observer for lazy loading
+    setupMobileLazyLoading() {
+        const options = {
+            root: document.getElementById('mobilePdfViewer'),
+            rootMargin: '200px', // Start loading 200px before coming into view
+            threshold: 0.1
+        };
         
-        console.log(`Rendered ${this.mobilePages.length} high-resolution mobile pages`);
+        this.pageObserver = new IntersectionObserver(async (entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    const pageDiv = entry.target;
+                    const pageNum = parseInt(pageDiv.getAttribute('data-page'));
+                    
+                    // Only render if not already rendered
+                    if (!pageDiv.querySelector('canvas')) {
+                        await this.renderSingleMobilePage(pageNum, pageDiv);
+                    }
+                    
+                    // Stop observing this page
+                    this.pageObserver.unobserve(pageDiv);
+                }
+            }
+        }, options);
+        
+        // Start observing all page placeholders
+        const pageElements = document.querySelectorAll('.mobile-pdf-page');
+        pageElements.forEach(pageElement => {
+            this.pageObserver.observe(pageElement);
+        });
+    }
+
+    // NEW: Render single mobile page
+    async renderSingleMobilePage(pageNum, pageDiv) {
+        try {
+            console.log(`Lazy loading page ${pageNum}`);
+            
+            // Remove placeholder
+            const placeholder = pageDiv.querySelector('.mobile-page-placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.id = `mobilePage${pageNum}`;
+            
+            // Insert canvas before indicator
+            const indicator = pageDiv.querySelector('.mobile-page-indicator');
+            pageDiv.insertBefore(canvas, indicator);
+            
+            // Render page with optimized settings
+            const page = await this.pdfDoc.getPage(pageNum);
+            const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap DPR at 2 for performance
+            
+            const baseViewport = page.getViewport({ scale: 1 });
+            const containerWidth = window.innerWidth - 32;
+            const baseScale = Math.min(containerWidth / baseViewport.width, 1.5); // Reduced max scale
+            
+            const finalScale = baseScale * dpr;
+            const viewport = page.getViewport({ scale: finalScale });
+            
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            
+            const displayWidth = baseViewport.width * baseScale;
+            const displayHeight = baseViewport.height * baseScale;
+            
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
+            
+            const context = canvas.getContext('2d');
+            
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            this.mobilePages[pageNum - 1] = canvas;
+            
+        } catch (error) {
+            console.error(`Error rendering mobile page ${pageNum}:`, error);
+            
+            // Show error placeholder
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'mobile-page-error';
+            errorDiv.innerHTML = `
+                <div class="error-content">
+                    <div class="error-icon">⚠️</div>
+                    <div class="error-text">Failed to load page ${pageNum}</div>
+                </div>
+            `;
+            pageDiv.appendChild(errorDiv);
+        }
     }
     
     showMobileTOC() {
@@ -505,54 +606,30 @@ class ViewerApp {
         
         console.log('Starting PDF load for:', this.filename);
         
-        // Show loader
         if (loader) {
             loader.classList.remove('hidden');
-            console.log('PDF loader shown');
         }
         
-        // Reset progress
         if (progressFill) progressFill.style.width = '0%';
         if (progressPercent) progressPercent.textContent = '0%';
         
         try {
+            // PERFORMANCE: Load title in parallel, don't block PDF loading
+            this.loadPDFTitleAsync(); // Non-blocking
+            
             console.log('Loading PDF:', this.filename);
-            
-            // ADDED: Fetch PDF metadata from pdf-list.json
-            let pdfTitle = this.filename.replace('.pdf', '').replace(/_/g, ' '); // Fallback title
-            try {
-                const metadataResponse = await fetch('assets/pdf-list.json');
-                if (metadataResponse.ok) {
-                    const pdfList = await metadataResponse.json();
-                    const pdfMetadata = pdfList.find(pdf => pdf.filename === this.filename);
-                    if (pdfMetadata && pdfMetadata.title) {
-                        pdfTitle = pdfMetadata.title;
-                        console.log('Found PDF title in metadata:', pdfTitle);
-                    } else {
-                        console.warn('PDF not found in metadata, using filename as title');
-                    }
-                } else {
-                    console.warn('Could not load pdf-list.json, using filename as title');
-                }
-            } catch (metadataError) {
-                console.warn('Error loading PDF metadata:', metadataError);
-            }
-            
-            // Update title early with metadata
-            const titleElement = document.getElementById('currentPdfTitle');
-            if (titleElement) {
-                titleElement.textContent = pdfTitle;
-            }
             
             const loadingTask = pdfjsLib.getDocument({
                 url: `assets/${this.filename}`,
+                // PERFORMANCE: Add caching and optimization options
+                cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                cMapPacked: true,
+                enableXfa: false, // Disable XFA for better performance
                 onProgress: (progress) => {
-                    console.log('PDF loading progress:', progress);
                     if (progressFill && progressPercent && progress.total) {
                         const percent = Math.round((progress.loaded / progress.total) * 100);
                         progressFill.style.width = `${percent}%`;
                         progressPercent.textContent = `${percent}%`;
-                        console.log(`Loading progress: ${percent}%`);
                     }
                 }
             });
@@ -562,15 +639,14 @@ class ViewerApp {
             
             console.log('PDF loaded successfully. Total pages:', this.totalPages);
             
-            // Final progress update
             if (progressFill) progressFill.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';
             
-            // Render based on device type
+            // PERFORMANCE: Render initial view only
             if (this.isMobile) {
-                await this.renderMobilePages();
+                await this.renderMobilePages(); // Now uses lazy loading
             } else {
-                await this.renderPages();
+                await this.renderPages(); // Only renders current 2 pages
             }
             
             this.generateTOC();
@@ -582,13 +658,35 @@ class ViewerApp {
             alert('Failed to load PDF: ' + error.message);
             window.location.href = 'index.html';
         } finally {
-            // Hide loader with a small delay to show 100% completion
             setTimeout(() => {
                 if (loader) {
                     loader.classList.add('hidden');
-                    console.log('PDF loader hidden');
                 }
-            }, 500);
+            }, 300); // Reduced delay
+        }
+    }
+
+    // NEW: Load PDF title asynchronously (non-blocking)
+    async loadPDFTitleAsync() {
+        let pdfTitle = this.filename.replace('.pdf', '').replace(/_/g, ' ');
+        
+        try {
+            const metadataResponse = await fetch('assets/pdf-list.json');
+            if (metadataResponse.ok) {
+                const pdfList = await metadataResponse.json();
+                const pdfMetadata = pdfList.find(pdf => pdf.filename === this.filename);
+                if (pdfMetadata && pdfMetadata.title) {
+                    pdfTitle = pdfMetadata.title;
+                }
+            }
+        } catch (error) {
+            console.warn('Error loading PDF metadata:', error);
+        }
+        
+        // Update title when ready
+        const titleElement = document.getElementById('currentPdfTitle');
+        if (titleElement) {
+            titleElement.textContent = pdfTitle;
         }
     }
 
@@ -608,21 +706,19 @@ class ViewerApp {
         try {
             const page = await this.pdfDoc.getPage(pageNum);
             
-            // FIXED: Better scaling calculation
-            const dpr = window.devicePixelRatio || 1;
+            // PERFORMANCE: Cap device pixel ratio for better performance
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
             
-            // Get the base viewport to calculate proper dimensions
             const baseViewport = page.getViewport({ scale: 1 });
             
-            // Calculate the final scale including zoom and DPR
+            // PERFORMANCE: Use more efficient scale calculation
             const finalScale = this.zoom * dpr;
             const viewport = page.getViewport({ scale: finalScale });
             
-            // Set canvas internal size (high resolution)
+            // Set canvas size efficiently
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             
-            // FIXED: Set canvas display size properly
             const displayWidth = baseViewport.width * this.zoom;
             const displayHeight = baseViewport.height * this.zoom;
             
@@ -635,9 +731,9 @@ class ViewerApp {
                 container.style.display = 'block';
             }
             
-            const context = canvas.getContext('2d');
+            // PERFORMANCE: Use willReadFrequently for better performance
+            const context = canvas.getContext('2d', { willReadFrequently: false });
             
-            // FIXED: Don't scale the context - let PDF.js handle it
             await page.render({ 
                 canvasContext: context, 
                 viewport: viewport 
@@ -647,8 +743,6 @@ class ViewerApp {
             if (pageNumberElement) {
                 pageNumberElement.textContent = pageNum;
             }
-            
-            // console.log(`Rendered high-res page ${pageNum} - Canvas: ${canvas.width}x${canvas.height}, Display: ${displayWidth}x${displayHeight}`);
             
         } catch (error) {
             console.error(`Error rendering page ${pageNum}:`, error);
@@ -853,10 +947,83 @@ class ViewerApp {
     }
     
     toggleFullscreen() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
+        try {
+            const isCurrentlyFullscreen = !!(
+                document.fullscreenElement || 
+                document.webkitFullscreenElement || 
+                document.mozFullScreenElement || 
+                document.msFullscreenElement
+            );
+            
+            if (isCurrentlyFullscreen) {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            } else {
+                // Enter fullscreen
+                const element = document.documentElement;
+                
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.mozRequestFullScreen) {
+                    element.mozRequestFullScreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                } else {
+                    // Fallback for browsers that don't support fullscreen API
+                    console.warn('Fullscreen API not supported');
+                    this.simulateFullscreen();
+                }
+            }
+        } catch (error) {
+            console.error('Fullscreen error:', error);
+            this.simulateFullscreen();
+        }
+    }
+
+    // ADDED: Fallback fullscreen simulation for mobile browsers
+    simulateFullscreen() {
+        const body = document.body;
+        const isSimulatedFullscreen = body.classList.contains('simulated-fullscreen');
+        
+        if (isSimulatedFullscreen) {
+            // Exit simulated fullscreen
+            body.classList.remove('simulated-fullscreen');
+            
+            // Restore scroll
+            body.style.overflow = '';
+            
+            // Update button
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            if (fullscreenBtn) {
+                fullscreenBtn.innerHTML = '⛶';
+                fullscreenBtn.title = 'Enter Fullscreen';
+            }
         } else {
-            document.documentElement.requestFullscreen();
+            // Enter simulated fullscreen
+            body.classList.add('simulated-fullscreen');
+            
+            // Hide scroll
+            body.style.overflow = 'hidden';
+            
+            // Try to hide address bar on mobile
+            window.scrollTo(0, 1);
+            
+            // Update button
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            if (fullscreenBtn) {
+                fullscreenBtn.innerHTML = '⤢';
+                fullscreenBtn.title = 'Exit Fullscreen';
+            }
         }
     }
     
@@ -919,10 +1086,24 @@ class ViewerApp {
             safeRemoveElement('.mobile-toc-modal');
             safeRemoveElement('#mobilePdfViewer');
             
+            // Cleanup intersection observer
+            if (this.pageObserver) {
+                this.pageObserver.disconnect();
+                this.pageObserver = null;
+            }
+            
             if (this.handleTOCClick) {
                 const tocBtn = document.getElementById('toggleTOC');
                 if (tocBtn) {
                     tocBtn.removeEventListener('click', this.handleTOCClick);
+                }
+            }
+            
+            // ADDED: Cleanup fullscreen handler
+            if (this.handleFullscreenClick) {
+                const fullscreenBtn = document.getElementById('fullscreenBtn');
+                if (fullscreenBtn) {
+                    fullscreenBtn.removeEventListener('click', this.handleFullscreenClick);
                 }
             }
             
@@ -932,6 +1113,11 @@ class ViewerApp {
                     mobileViewer.removeEventListener('scroll', this.handleMobileScroll);
                 }
             }
+            
+            // Remove simulated fullscreen if active
+            document.body.classList.remove('simulated-fullscreen');
+            document.body.style.overflow = '';
+            
         } catch (error) {
             console.error('Error during cleanup:', error);
         }

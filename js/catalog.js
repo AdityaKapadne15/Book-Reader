@@ -17,6 +17,12 @@ class CatalogApp {
     }
     
     init() {
+        // FIXED: Initialize search state properly
+        this.state.setState({ 
+            searchQuery: '',
+            selectedCategory: ''
+        });
+        
         this.themeManager = new ThemeManager(this.state);
         this.eyeProtection = new EyeProtectionManager(this.state);
         
@@ -30,36 +36,58 @@ class CatalogApp {
         const categoryFilter = document.getElementById('categoryFilter');
         
         if (searchInput) {
-            // Add multiple event listeners for better responsiveness
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim().toLowerCase();
-                console.log('Search query:', query); // Debug log
-                this.state.setState({ searchQuery: query });
-                this.renderCatalog();
+            console.log('Binding search events');
+            
+            // FIXED: Use a single, debounced input handler
+            let searchTimeout;
+            
+            const handleSearch = (e) => {
+                clearTimeout(searchTimeout);
+                
+                searchTimeout = setTimeout(() => {
+                    const query = e.target.value.trim().toLowerCase();
+                    console.log('Search query updated:', query);
+                    
+                    // Update state
+                    this.state.setState({ searchQuery: query });
+                    
+                    // Re-render catalog
+                    this.renderCatalog();
+                }, 300); // 300ms debounce
+            };
+            
+            // Bind to input event with debouncing
+            searchInput.addEventListener('input', handleSearch);
+            
+            // Also handle paste events
+            searchInput.addEventListener('paste', (e) => {
+                setTimeout(() => handleSearch(e), 10);
             });
             
-            // Also listen for keyup for immediate response
-            searchInput.addEventListener('keyup', (e) => {
-                const query = e.target.value.trim().toLowerCase();
-                this.state.setState({ searchQuery: query });
-                this.renderCatalog();
-            });
-            
-            // Clear search functionality
-            searchInput.addEventListener('blur', (e) => {
-                if (e.target.value.trim() === '') {
+            // Clear search on escape
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    searchInput.value = '';
                     this.state.setState({ searchQuery: '' });
                     this.renderCatalog();
                 }
             });
+        } else {
+            console.warn('Search input not found');
         }
         
         if (categoryFilter) {
+            console.log('Binding category filter events');
+            
             categoryFilter.addEventListener('change', (e) => {
-                console.log('Category filter:', e.target.value); // Debug log
-                this.state.setState({ selectedCategory: e.target.value });
+                const category = e.target.value;
+                console.log('Category filter changed:', category);
+                
+                this.state.setState({ selectedCategory: category });
                 this.renderCatalog();
             });
+        } else {
+            console.warn('Category filter not found');
         }
         
         // View toggle buttons
@@ -106,7 +134,7 @@ class CatalogApp {
         if (filtered.length === 0) {
             grid.innerHTML = `
                 <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--color-text-secondary);">
-                    <p>No PDFs found matching your criteria.</p>
+                    <p>No Books found matching your criteria.</p>
                     ${this.state.state.searchQuery ? `<p>Try searching for: "${this.state.state.searchQuery}"</p>` : ''}
                 </div>
             `;
@@ -203,23 +231,15 @@ class CatalogApp {
                 ];
             }
             
-            // Extract page count using PDF.js (optional, don't block rendering)
-            for (let pdf of this.pdfs) {
-                try {
-                    if (typeof pdfjsLib !== 'undefined') {
-                        const doc = await pdfjsLib.getDocument(`assets/${pdf.filename}`).promise;
-                        pdf.pages = doc.numPages;
-                        console.log(`Loaded page count for ${pdf.filename}: ${pdf.pages}`);
-                    }
-                } catch (error) {
-                    console.warn(`Could not load page count for ${pdf.filename}:`, error);
-                    pdf.pages = pdf.pages || '?';
-                }
-            }
+            // REMOVED: The performance-killing PDF page count extraction
+            // Now render immediately with pre-defined page counts from JSON
             
             console.log('Populating category filter and rendering catalog...');
             this.populateCategoryFilter();
             this.renderCatalog();
+            
+            // OPTIONAL: Load page counts asynchronously in background (doesn't block UI)
+            this.loadPageCountsAsync();
             
         } catch (error) {
             console.error('Failed to load catalog:', error);
@@ -234,6 +254,49 @@ class CatalogApp {
             }
         }
     }
+
+    // ADDED: Optional background page count loading (doesn't block UI)
+    async loadPageCountsAsync() {
+        console.log('Loading page counts in background...');
+        
+        for (let pdf of this.pdfs) {
+            try {
+                if (typeof pdfjsLib !== 'undefined') {
+                    // Add a small delay between requests to avoid overwhelming the server
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const doc = await pdfjsLib.getDocument(`assets/${pdf.filename}`).promise;
+                    const actualPages = doc.numPages;
+                    
+                    // Only update if different from pre-defined value
+                    if (pdf.pages !== actualPages) {
+                        pdf.pages = actualPages;
+                        console.log(`Updated page count for ${pdf.filename}: ${actualPages}`);
+                        
+                        // Re-render only this specific card
+                        this.updateSingleCard(pdf);
+                    }
+                }
+            } catch (error) {
+                console.warn(`Could not load page count for ${pdf.filename}:`, error);
+                // Keep the pre-defined page count from JSON
+            }
+        }
+        
+        console.log('Background page count loading completed');
+    }
+
+    // ADDED: Update a single card without re-rendering everything
+    updateSingleCard(pdf) {
+        const card = document.querySelector(`[data-filename="${pdf.filename}"]`);
+        if (card) {
+            const pagesSpan = card.querySelector('.pdf-meta span:first-child');
+            if (pagesSpan) {
+                pagesSpan.textContent = `${pdf.pages} pages`;
+            }
+        }
+    }
+
     
     populateCategoryFilter() {
         const categoryFilter = document.getElementById('categoryFilter');
@@ -252,38 +315,57 @@ class CatalogApp {
         
         let filtered = [...this.pdfs];
         
-        // Apply filters
-        if (this.state.state.searchQuery) {
-            filtered = filtered.filter(pdf => 
-                pdf.title.toLowerCase().includes(this.state.state.searchQuery) ||
-                pdf.description.toLowerCase().includes(this.state.state.searchQuery) ||
-                (pdf.author && pdf.author.toLowerCase().includes(this.state.state.searchQuery)) ||
-                pdf.category.toLowerCase().includes(this.state.state.searchQuery)
-            );
+        console.log('Original PDFs count:', filtered.length);
+        console.log('Search query:', this.state.state.searchQuery);
+        console.log('Selected category:', this.state.state.selectedCategory);
+        
+        // FIXED: Apply search filter with better logic
+        if (this.state.state.searchQuery && this.state.state.searchQuery.trim().length > 0) {
+            const query = this.state.state.searchQuery.toLowerCase().trim();
+            filtered = filtered.filter(pdf => {
+                // Search in multiple fields with null checks
+                const titleMatch = pdf.title && pdf.title.toLowerCase().includes(query);
+                const descMatch = pdf.description && pdf.description.toLowerCase().includes(query);
+                const authorMatch = pdf.author && pdf.author.toLowerCase().includes(query);
+                const categoryMatch = pdf.category && pdf.category.toLowerCase().includes(query);
+                
+                return titleMatch || descMatch || authorMatch || categoryMatch;
+            });
+            console.log('After search filter:', filtered.length);
         }
         
-        if (this.state.state.selectedCategory) {
+        // Apply category filter
+        if (this.state.state.selectedCategory && this.state.state.selectedCategory !== '') {
             filtered = filtered.filter(pdf => pdf.category === this.state.state.selectedCategory);
+            console.log('After category filter:', filtered.length);
         }
         
+        // Handle empty results
         if (filtered.length === 0) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--color-text-secondary);">No PDFs found matching your criteria.</div>';
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--color-text-secondary);">
+                    <p>No Books found matching your criteria.</p>
+                    ${this.state.state.searchQuery ? `<p>Try a different search term: "${this.state.state.searchQuery}"</p>` : ''}
+                    ${this.state.state.selectedCategory ? `<p>Category: "${this.state.state.selectedCategory}"</p>` : ''}
+                </div>
+            `;
             return;
         }
         
+        // Render filtered results
         grid.innerHTML = filtered.map(pdf => `
             <div class="pdf-card" data-filename="${pdf.filename}">
                 <div class="pdf-thumbnail">
                     <img src="assets/thumbnails/${pdf.thumbnail || 'default.jpg'}" 
-                         alt="${pdf.title}" 
-                         onerror="this.style.display='none'; this.parentElement.innerHTML='📄';">
+                        alt="${pdf.title}" 
+                        onerror="this.style.display='none'; this.parentElement.innerHTML='📄';">
                 </div>
                 <div class="pdf-card-content">
                     <h3>${pdf.title}</h3>
-                    <p>${pdf.author || ''}</p>
-                    <p class="pdf-description">${pdf.description?pdf.description:" "}</p>
+                    <p class="pdf-author">${pdf.author || ''}</p>
+                    <p class="pdf-description">${pdf.description || ''}</p>
                     <div class="pdf-meta">
-                        <span>${pdf.pages} pages</span>
+                        <span>${pdf.pages || '?'} pages</span>
                         <span class="pdf-category">${pdf.category}</span>
                     </div>
                 </div>

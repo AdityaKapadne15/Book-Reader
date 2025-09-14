@@ -1549,6 +1549,76 @@ input:checked + .theme-slider:before {
   font-size: var(--font-size-sm);
 }
 
+/* Add to your CSS */
+.mobile-page-placeholder {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-card-border);
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.page-placeholder-content {
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.placeholder-icon {
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--space-8);
+}
+
+.placeholder-text {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+}
+
+.mobile-page-error {
+    background-color: var(--color-bg-4);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-error);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.error-content {
+    text-align: center;
+    color: var(--color-error);
+}
+
+/* Add this CSS for simulated fullscreen fallback */
+.simulated-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background: var(--color-background) !important;
+}
+
+.simulated-fullscreen .reading-view {
+    height: 100vh !important;
+    width: 100vw !important;
+}
+
+/* Hide elements during simulated fullscreen */
+.simulated-fullscreen .mobile-header-level-1,
+.simulated-fullscreen .mobile-header-level-2 {
+    display: none !important;
+}
+
+.simulated-fullscreen .mobile-pdf-viewer {
+    height: 100vh !important;
+    padding-top: 0 !important;
+}
+
 /* Responsive design */
 @media (max-width: 1024px) {
   .toc-sidebar {
@@ -2613,6 +2683,7 @@ input:checked + .theme-slider:before {
     box-sizing: border-box;
     /* ADDED: Allow touch interactions */
     touch-action: auto;
+    height: 2.5rem;
   }
 
   .mobile-controls-group {
