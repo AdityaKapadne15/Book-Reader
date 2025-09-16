@@ -107,7 +107,7 @@ class ViewerApp {
         );
         
         if (isFullscreen) {
-            fullscreenBtn.innerHTML = '⤢';
+            fullscreenBtn.innerHTML = '✖';
             fullscreenBtn.title = 'Exit Fullscreen';
         } else {
             fullscreenBtn.innerHTML = '⛶';
@@ -1128,7 +1128,7 @@ class ViewerApp {
             // Update button
             const fullscreenBtn = document.getElementById('fullscreenBtn');
             if (fullscreenBtn) {
-                fullscreenBtn.innerHTML = '⤢';
+                fullscreenBtn.innerHTML = '✖';
                 fullscreenBtn.title = 'Exit Fullscreen';
             }
         }
