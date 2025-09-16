@@ -1346,7 +1346,7 @@ input:checked + .theme-slider:before {
 
 .page-spread {
   display: flex;
-  gap: var(--space-16);
+  gap: var(--space-0);
   transform-origin: center;
   transition: transform var(--duration-normal) var(--ease-standard);
 }
@@ -2081,7 +2081,7 @@ input:checked + .theme-slider:before {
 
 .page-spread {
   display: flex;
-  gap: var(--space-16);
+  gap: var(--space-0);
   transform-origin: center;
   transition: transform var(--duration-normal) var(--ease-standard);
   /* max-width: 100%; Prevent overflow */
@@ -2162,7 +2162,7 @@ input:checked + .theme-slider:before {
   .page-spread {
     flex-direction: column;
     align-items: center;
-    gap: var(--space-12);
+    gap: var(--space-0);
   }
   
   .pdf-page-container {
@@ -2265,13 +2265,102 @@ input:checked + .theme-slider:before {
 /* Fix page spread centering and sizing */
 .page-spread {
   display: flex;
-  gap: var(--space-16);
+  gap: var(--space-0);
   transform-origin: center;
   transition: transform var(--duration-normal) var(--ease-standard);
   justify-content: center;
   align-items: center; /* Center vertically */
   height: fit-content; /* Don't stretch unnecessarily */
   max-height: 90vh; /* Limit height */
+}
+
+/* Desktop Book-like Layout - Open Book Effect - IMPROVED */
+@media (min-width: 769px) {
+    /* Remove gap between pages for book effect */
+    .page-spread {
+        gap: 0;
+        position: relative;
+    }
+    
+    /* LEFT page - LIGHTER shadow with MORE spread from right edge (spine) */
+    .pdf-page-container.left-page {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        box-shadow: 
+            inset -40px 0 60px -5px rgba(0, 0, 0, 0.5),    /* Lighter but wider spread */
+            inset -80px 0 120px -10px rgba(0, 0, 0, 0.3),  /* Much wider spread */
+            inset -140px 0 180px -20px rgba(0, 0, 0, 0.15), /* Very wide, light spread */
+            0 8px 20px rgba(0, 0, 0, 0.2) !important;      /* Lighter outer shadow */
+        position: relative;
+        z-index: 2;
+    }
+    
+    /* RIGHT page - LIGHTER shadow with MORE spread from left edge (spine) */
+    .pdf-page-container.right-page {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        box-shadow: 
+            inset 40px 0 60px -5px rgba(0, 0, 0, 0.5),     /* Lighter but wider spread */
+            inset 80px 0 120px -10px rgba(0, 0, 0, 0.3),   /* Much wider spread */
+            inset 140px 0 180px -20px rgba(0, 0, 0, 0.15), /* Very wide, light spread */
+            0 8px 20px rgba(0, 0, 0, 0.2) !important;      /* Lighter outer shadow */
+        position: relative;
+        z-index: 2;
+    }
+    
+    /* IMPROVED Center spine shadow line - matches canvas height */
+    .page-spread::after {
+        content: '';
+        position: absolute;
+        top: 0;                    /* FIXED: Start from top of canvas */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;                /* Slightly thinner */
+        height: 100%;              /* FIXED: Full canvas height */
+        background: linear-gradient(
+            to bottom,
+            rgba(77, 77, 77, 0.2) 0%,        /* LIGHTER: Start lighter */
+            rgba(61, 61, 61, 0.4) 20%,       /* LIGHTER: Build up gradually */
+            rgba(46, 46, 46, 0.6) 50%,       /* LIGHTER: Peak intensity */
+            rgba(61, 61, 61, 0.4) 80%,       /* LIGHTER: Fade down */
+            rgba(77, 77, 77, 0.2) 100%       /* LIGHTER: End lighter */
+        );
+        z-index: 3;
+        border-radius: 2px;
+        pointer-events: none;
+        box-shadow: 
+            0 0 6px rgba(0, 0, 0, 1.8),        /* LIGHTER: Reduced glow */
+            inset 0 0 2px rgba(75, 75, 75, 0.8);   /* LIGHTER: Reduced inner shadow */
+    }
+    
+    /* Canvas border radius removal */
+    .pdf-page-container.left-page canvas {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .pdf-page-container.right-page canvas {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    
+    /* IMPROVED: Smaller, better positioned page numbers */
+    .pdf-page-container .page-number {
+        position: absolute;
+        bottom: 15px;
+        background: rgba(0, 0, 0, 0.75);      /* LIGHTER: Reduced opacity */
+        color: white;
+        padding: 4px 8px;                     /* SMALLER: Reduced padding */
+        border-radius: 4px;                   /* SMALLER: Reduced border radius */
+        font-size: 11px;                      /* SMALLER: Reduced font size */
+        font-weight: 600;                     /* LIGHTER: Reduced font weight */
+        z-index: 5;
+        min-width: 20px;                      /* SMALLER: Reduced min width */
+        text-align: center;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); /* LIGHTER: Reduced shadow */
+        font-family: var(--font-family-mono, 'Courier New', monospace);
+        border: 1px solid rgba(255, 255, 255, 0.08); /* LIGHTER: Reduced border opacity */
+    }
 }
 
 /* Fix individual page containers */

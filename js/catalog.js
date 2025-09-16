@@ -188,7 +188,7 @@ class CatalogApp {
                         filename: "DR_CDR)_N_K_Natrajan_SSB_INTERVIEW_COMPLETE_GUIDE.pdf", 
                         thumbnail: "DR_CDR)_N_K_Natrajan_SSB_INTERVIEW_COMPLETE_GUIDE.jpg",
                         description: "A comprehensive technical manual demonstrating dual-page reading experience",
-                        pages: 120,
+                        pages: 238,
                         category: "Technical",
                         author: "DR (CDR) N K Natrajan"
                     },
@@ -221,9 +221,6 @@ class CatalogApp {
             this.populateCategoryFilter();
             this.renderCatalog();
             
-            // OPTIONAL: Load page counts asynchronously in background (doesn't block UI)
-            this.loadPageCountsAsync();
-            
         } catch (error) {
             console.error('Failed to load catalog:', error);
             if (grid) {
@@ -235,34 +232,6 @@ class CatalogApp {
                 loader.classList.add('hidden');
             }
         }
-    }
-
-    // ADDED: Optional background page count loading (doesn't block UI)
-    async loadPageCountsAsync() {
-        
-        for (let pdf of this.pdfs) {
-            try {
-                if (typeof pdfjsLib !== 'undefined') {
-                    // Add a small delay between requests to avoid overwhelming the server
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    const doc = await pdfjsLib.getDocument(`assets/${pdf.filename}`).promise;
-                    const actualPages = doc.numPages;
-                    
-                    // Only update if different from pre-defined value
-                    if (pdf.pages !== actualPages) {
-                        pdf.pages = actualPages;
-                        
-                        // Re-render only this specific card
-                        this.updateSingleCard(pdf);
-                    }
-                }
-            } catch (error) {
-                console.warn(`Could not load page count for ${pdf.filename}:`, error);
-                // Keep the pre-defined page count from JSON
-            }
-        }
-        
     }
 
     // ADDED: Update a single card without re-rendering everything

@@ -1,142 +1,200 @@
 [
   {
+    "id": 1,
     "filename": "DR_(CDR)_N_K_Natrajan_SSB_INTERVIEW_COMPLETE_GUIDE.pdf",
     "title": "DR (CDR) N K Natrajan SSB INTERVIEW COMPLETE GUIDE",
+    "description": "Complete guide for SSB interview preparation",
+    "pages": 238,
     "author": "DR (CDR) N K Natrajan",
     "category": "Military / War",
     "thumbnail": "DR_CDR)_N_K_Natrajan_SSB_INTERVIEW_COMPLETE_GUIDE.jpg"
   },
   {
+    "id": 2,
     "filename": "1984 India's Guilty Secret.pdf",
     "title": "1984 India's Guilty Secret",
+    "description": "A comprehensive account of the 1984 anti-Sikh riots",
+    "pages": 352,
     "author": "Amitav Ghosh",
     "category": "Military / War",
     "thumbnail": "1984 India's Guilty Secret.jpg"
   },
   {
+    "id": 3,
     "filename": "American_Sniper_-_Chris_Kyle.pdf",
     "title": "American Sniper",
+    "description": "The autobiography of America's most lethal sniper",
+    "pages": 381,
     "author": "Chris Kyle",
     "category": "Military / War",
     "thumbnail": "American_Sniper_-_Chris_Kyle.jpg"
   },
   {
+    "id": 4,
     "filename": "balidan_-_swapnil_pandey.pdf",
     "title": "Balidan",
+    "description": "Stories of Indian's Greatest Para Special Forces Operatives",
+    "pages": 248,
     "author": "Swapnil Pandey",
     "category": "Military / War",
     "thumbnail": "balidan_-_swapnil_pandey.jpg"
   },
   {
+    "id": 5,
     "filename": "Lone_Survivor_-_Marcus_Luttrell.pdf",
-    "title": "Lone Survivor -Marcus Luttrell",
+    "title": "Lone Survivor",
+    "description": "The eyewitness account of Operation Redwing",
+    "pages": 390,
     "author": "Marcus Luttrell",
     "category": "Military / War",
     "thumbnail": "Lone_Survivor_-_Marcus_Luttrell.jpg"
   },
   {
+    "id": 6,
     "filename": "Never_will_I_die_-_TOBIAS_GUTTERIDGE.pdf",
     "title": "Never Will I Die",
-    "author": "TOBIAS GUTTERIDGE",
+    "description": "A powerful military memoir",
+    "pages": 312,
+    "author": "Tobias Gutteridge",
     "category": "Military / War",
     "thumbnail": "Never_will_I_die_-_TOBIAS_GUTTERIDGE.jpg"
   },
   {
+    "id": 7,
     "filename": "No_Easy_Day_The_Firsthand_Account_of_the_Mission_That_Killed_Osama_Bin_Laden_-_Mark_Owen.pdf",
     "title": "No Easy Day",
+    "description": "The firsthand account of the mission that killed Osama Bin Laden",
+    "pages": 316,
     "author": "Mark Owen",
-    "description":"The Firsthand Account of the Mission That Killed Osama Bin Laden",
     "category": "Military / War",
     "thumbnail": "No_Easy_Day.jpg"
   },
   {
+    "id": 8,
     "filename": "The_Art_of_War_-_Thomas_Cleary.pdf",
-    "title": "The Art of War -Sun Tzu",
-    "author": "Thomas Cleary",
+    "title": "The Art of War",
+    "description": "Sun Tzu's timeless strategy guide",
+    "pages": 273,
+    "author": "Sun Tzu (Translated by Thomas Cleary)",
     "category": "Military / War",
     "thumbnail": "the_art_of_war.jpg"
   },
   {
+    "id": 9,
     "filename": "chhava-by-shivaji-sawant.pdf",
     "title": "Chhava",
+    "description": "Historical novel about Chhatrapati Sambhaji Maharaj",
+    "pages": 584,
     "author": "Shivaji Sawant",
-    "category": "Non-Fiction",
+    "category": "Historical Fiction",
     "thumbnail": "chava.jpg"
   },
   {
+    "id": 10,
     "filename": "Sambhaji_-_Vishwas_patil.pdf",
-    "title": "Sambhaji -Vishwas Patil",
+    "title": "Sambhaji",
+    "description": "Biography of the Maratha warrior king Chhatrapati Sambhaji Maharaj",
+    "pages": 456,
     "author": "Vishwas Patil",
-    "category": "Non-Fiction",
+    "category": "Historical Fiction",
     "thumbnail": "Sambhaji_-_Vishwas_patil.jpg"
   },
   {
+    "id": 11,
     "filename": "Shriman_Yogi_-_Ranjeet_Desai.pdf",
     "title": "Shriman Yogi",
+    "description": "Historical novel about Chhatrapati Shivaji Maharaj",
+    "pages": 672,
     "author": "Ranjeet Desai",
-    "category": "Non-Fiction",
+    "category": "Historical Fiction",
     "thumbnail": "shrimanyogi.jpg"
   },
   {
+    "id": 12,
     "filename": "The_Indian_war_of_independence_-_Vinayak_Damodar_Savarkar.pdf",
     "title": "The Indian War Of Independence 1857",
+    "description": "Revolutionary account of India's first war of independence",
+    "pages": 493,
     "author": "Vinayak Damodar Savarkar",
     "category": "Military / War",
     "thumbnail": "The_Indian_war_of_independence_-_Vinayak_Damodar_Savarkar.jpg"
   },
   {
+    "id": 13,
     "filename": "48_laws_of_powers_-_Robert_Greene.pdf",
-    "title": "48 Laws Of Powers",
+    "title": "48 Laws Of Power",
+    "description": "The ultimate guide to power and influence",
+    "pages": 452,
     "author": "Robert Greene",
     "category": "Self Help",
     "thumbnail": "48_laws_of_power.jpg"
   },
   {
+    "id": 14,
     "filename": "Mastery_-_Robert_Greene.pdf",
     "title": "Mastery",
+    "description": "The keys to success and long-term fulfillment",
+    "pages": 352,
     "author": "Robert Greene",
     "category": "Self Help",
     "thumbnail": "mastery.jpg"
   },
   {
+    "id": 15,
     "filename": "The_Art_of_Seductions_-_Robert_Greene.pdf",
-    "title": "The Art Of Seductions",
+    "title": "The Art Of Seduction",
+    "description": "The psychology of persuasion and influence",
+    "pages": 468,
     "author": "Robert Greene",
     "category": "Self Help",
     "thumbnail": "the_art_of_seduction.jpg"
   },
   {
+    "id": 16,
     "filename": "The_33_strategies_of_war_-_Robert_Greene.pdf",
     "title": "The 33 Strategies Of War",
+    "description": "Strategic wisdom for life's battles",
+    "pages": 496,
     "author": "Robert Greene",
     "category": "Self Help",
     "thumbnail": "The_33_Strategies_of_War.jpg"
   },
   {
+    "id": 17,
     "filename": "The_psychology_of_money_-_Morgan_housel.pdf",
     "title": "The Psychology Of Money",
+    "description": "Timeless lessons on wealth, greed, and happiness",
+    "pages": 256,
     "author": "Morgan Housel",
     "category": "Finance",
     "thumbnail": "The_psychology_of_money.jpg"
   },
   {
+    "id": 18,
     "filename": "Ikigai_The_Japanese_Secret_to_a_Long_and_Happy_Life_-_Hector_Garcia_and_Francesc_Miralles.pdf",
     "title": "Ikigai",
+    "description": "The Japanese secret to a long and happy life",
+    "pages": 208,
     "author": "Hector Garcia and Francesc Miralles",
-    "description":"The Japanese Secret to a Long and Happy Life",
     "category": "Self Help",
     "thumbnail": "ikigai.jpg"
   },
   {
+    "id": 19,
     "filename": "yayati-marathipdf_compress.pdf",
     "title": "Yayati",
+    "description": "Classic Marathi novel exploring human desires",
+    "pages": 248,
     "author": "V S Khandekar",
     "category": "Fiction",
     "thumbnail": "yayati.jpg"
   },
   {
+    "id": 20,
     "filename": "Yugandhar_-_Shivaji_Sawant.pdf",
     "title": "Yugandhar",
+    "description": "Epic novel about Lord Krishna",
+    "pages": 832,
     "author": "Shivaji Sawant",
     "category": "Fiction",
     "thumbnail": "yugandhar.jpg"
