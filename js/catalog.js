@@ -157,6 +157,29 @@ class CatalogApp {
                 window.location.href = `viewer.html?pdf=${encodeURIComponent(filename)}`;
             });
         });
+        this.updateShelfTitleWithCount(filtered.length);
+    }
+
+    updateShelfTitle() {
+        const shelfTitle = document.getElementById('shelfTitle');
+        if (shelfTitle) {
+            const totalCount = this.pdfs.length;
+            shelfTitle.textContent = `Your Shelf (${totalCount})`;
+        }
+    }
+
+    updateShelfTitleWithCount(count) {
+        const shelfTitle = document.getElementById('shelfTitle');
+        if (shelfTitle) {
+            const totalCount = this.pdfs.length;
+            if (count === totalCount) {
+                // Show total count when no filters
+                shelfTitle.textContent = `Your Shelf (${totalCount})`;
+            } else {
+                // Show filtered count with total when filters are active
+                shelfTitle.textContent = `Your Shelf (${count} of ${totalCount})`;
+            }
+        }
     }
         
     async loadCatalog() {
@@ -220,6 +243,7 @@ class CatalogApp {
             
             this.populateCategoryFilter();
             this.renderCatalog();
+            this.updateShelfTitle(); 
             
         } catch (error) {
             console.error('Failed to load catalog:', error);
@@ -321,6 +345,7 @@ class CatalogApp {
                 window.location.href = `viewer.html?pdf=${encodeURIComponent(filename)}`;
             });
         });
+        this.updateShelfTitleWithCount(filtered.length);
     }
     
     switchView(viewType) {
